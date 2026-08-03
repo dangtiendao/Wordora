@@ -5,14 +5,17 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { LearningItem } from '@/domain/entities/learning-item';
+import { ReviewState } from '@/domain/entities/review-state';
 import { CardRating } from '../store/study-session-store';
 import { useSpeech } from '@/hooks/use-speech';
 import { VoiceRecorderWidget } from '@/features/recording';
+import { SM2Scheduler } from '@/features/srs';
 import { RotateCw, Volume2, Square, X, Tag, HelpCircle } from 'lucide-react';
 
 export interface FlashcardViewProps {
   deckName: string;
   item: LearningItem;
+  reviewState?: ReviewState;
   currentIndex: number;
   totalItems: number;
   isAnswerVisible: boolean;
@@ -24,6 +27,7 @@ export interface FlashcardViewProps {
 export const FlashcardView: React.FC<FlashcardViewProps> = ({
   deckName,
   item,
+  reviewState,
   currentIndex,
   totalItems,
   isAnswerVisible,
@@ -38,6 +42,24 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
 
   const textToRead = isAnswerVisible ? item.answer : item.prompt;
   const isCurrentSpeaking = isSpeaking && currentText === textToRead;
+
+  // Calculate SRS interval previews for rating buttons
+  const previews = React.useMemo(() => {
+    const dummyState: ReviewState = reviewState || {
+      id: `tmp-${item.id}`,
+      itemId: item.id,
+      status: 'new',
+      easeFactor: 2.5,
+      intervalDays: 0,
+      repetitions: 0,
+      lapses: 0,
+      dueAt: new Date().toISOString(),
+      algorithmVersion: SM2Scheduler.ALGORITHM_VERSION,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    return SM2Scheduler.previewIntervals(dummyState);
+  }, [reviewState, item.id]);
 
   // Auto stop audio when switching items or flipping
   React.useEffect(() => {
@@ -221,7 +243,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
       {/* Voice Recorder Widget for Pronunciation Practice */}
       <VoiceRecorderWidget itemId={item.id} itemPrompt={item.prompt} />
 
-      {/* Rating Buttons Section (Enabled only after answer is flipped) */}
+      {/* Rating Buttons Section with SRS Interval Previews */}
       <div className="space-y-2 pt-2">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Button
@@ -232,7 +254,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             className="flex flex-col py-3 h-auto gap-0.5"
           >
             <span className="font-bold text-sm">1. Chưa nhớ</span>
-            <span className="text-[10px] opacity-80 font-normal">Cần học lại</span>
+            <span className="text-[10px] opacity-80 font-normal">Học lại ({previews.again})</span>
           </Button>
 
           <Button
@@ -243,7 +265,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             className="flex flex-col py-3 h-auto gap-0.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold border-amber-500"
           >
             <span className="font-bold text-sm">2. Khó</span>
-            <span className="text-[10px] opacity-90 font-normal">Nhớ chưa chắc</span>
+            <span className="text-[10px] opacity-90 font-normal">Chưa chắc ({previews.hard})</span>
           </Button>
 
           <Button
@@ -254,7 +276,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             className="flex flex-col py-3 h-auto gap-0.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
           >
             <span className="font-bold text-sm">3. Nhớ</span>
-            <span className="text-[10px] opacity-90 font-normal">Trả lời đúng</span>
+            <span className="text-[10px] opacity-90 font-normal">Đã nhớ ({previews.good})</span>
           </Button>
 
           <Button
@@ -265,7 +287,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             className="flex flex-col py-3 h-auto gap-0.5"
           >
             <span className="font-bold text-sm">4. Rất dễ</span>
-            <span className="text-[10px] opacity-90 font-normal">Nhớ thành thạo</span>
+            <span className="text-[10px] opacity-90 font-normal">Thành thạo ({previews.easy})</span>
           </Button>
         </div>
 

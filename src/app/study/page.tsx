@@ -8,6 +8,9 @@ import { ErrorState } from '@/components/ui/error-state';
 import { UnsupportedFeature } from '@/components/ui/unsupported-feature';
 import { DeckUseCases, DeckWithStats } from '@/features/decks';
 import { LearningItemUseCases } from '@/features/learning-items';
+import { ReviewApplicationService } from '@/features/srs';
+import { ReviewRating } from '@/domain/value-objects/types';
+import { ReviewState } from '@/domain/entities/review-state';
 import {
   SessionSetupDialog,
   FlashcardView,
@@ -17,12 +20,21 @@ import {
   useStudySessionStore,
   SessionOrder,
   SessionFilterMode,
+  CardRating,
 } from '@/features/study';
+
+const RATING_MAP: Record<CardRating, ReviewRating> = {
+  1: 'again',
+  2: 'hard',
+  3: 'good',
+  4: 'easy',
+};
 
 export default function StudyPage() {
   const { status, errorMessage, container } = useDatabase();
   const [decks, setDecks] = React.useState<DeckWithStats[]>([]);
   const [isLoadingDecks, setIsLoadingDecks] = React.useState(true);
+  const [currentReviewState, setCurrentReviewState] = React.useState<ReviewState | undefined>(undefined);
 
   // Zustand Store State & Actions
   const {
@@ -61,6 +73,11 @@ export default function StudyPage() {
     return new StudyUseCases(container.studySessionRepository);
   }, [container]);
 
+  const reviewAppService = React.useMemo(() => {
+    if (!container) return null;
+    return new ReviewApplicationService(container);
+  }, [container]);
+
   // Load active decks
   const loadDecks = React.useCallback(async () => {
     if (!deckUseCases) return;
@@ -88,6 +105,42 @@ export default function StudyPage() {
       isMounted = false;
     };
   }, [status, loadDecks]);
+
+  // Fetch ReviewState for current active card
+  const currentItem = items[currentIndex];
+  React.useEffect(() => {
+    let isMounted = true;
+    if (container && currentItem) {
+      container.reviewStateRepository.findByItemId(currentItem.id).then((state) => {
+        if (isMounted && state) {
+          setCurrentReviewState(state);
+        } else if (isMounted) {
+          setCurrentReviewState(undefined);
+        }
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [container, currentItem]);
+
+  // Handle rating click with atomic SRS transaction
+  const handleRate = async (rating: CardRating) => {
+    const activeItem = items[currentIndex];
+    rateCurrentCard(rating);
+
+    if (reviewAppService && activeItem) {
+      try {
+        const srsRating = RATING_MAP[rating];
+        await reviewAppService.processReview({
+          itemId: activeItem.id,
+          rating: srsRating,
+        });
+      } catch {
+        // Silent catch for SRS transaction error
+      }
+    }
+  };
 
   // Handle start study session
   const handleStartSession = async (
@@ -170,11 +223,12 @@ export default function StudyPage() {
         <FlashcardView
           deckName={deckName}
           item={items[currentIndex]}
+          reviewState={currentReviewState}
           currentIndex={currentIndex}
           totalItems={items.length}
           isAnswerVisible={isAnswerVisible}
           onFlip={flipCard}
-          onRate={rateCurrentCard}
+          onRate={handleRate}
           onCancel={cancelSession}
         />
       ) : sessionStatus === 'completed' ? (
