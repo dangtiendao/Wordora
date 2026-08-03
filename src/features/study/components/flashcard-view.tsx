@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { LearningItem } from '@/domain/entities/learning-item';
 import { CardRating } from '../store/study-session-store';
-import { RotateCw, Volume2, X, Tag, HelpCircle } from 'lucide-react';
+import { useSpeech } from '@/hooks/use-speech';
+import { VoiceRecorderWidget } from '@/features/recording';
+import { RotateCw, Volume2, Square, X, Tag, HelpCircle } from 'lucide-react';
 
 export interface FlashcardViewProps {
   deckName: string;
@@ -30,13 +32,21 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
   onCancel,
 }) => {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
+  const { isSupported, isSpeaking, currentText, speak, stop } = useSpeech();
 
   const progressPercent = Math.round(((currentIndex + 1) / totalItems) * 100);
+
+  const textToRead = isAnswerVisible ? item.answer : item.prompt;
+  const isCurrentSpeaking = isSpeaking && currentText === textToRead;
+
+  // Auto stop audio when switching items or flipping
+  React.useEffect(() => {
+    stop();
+  }, [currentIndex, isAnswerVisible, stop]);
 
   // Keyboard shortcut listener
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Avoid firing shortcuts if user is inside an input field
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
         return;
       }
@@ -66,6 +76,16 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onFlip, onRate, isAnswerVisible]);
 
+  const handleAudioPlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isSupported) return;
+    if (isCurrentSpeaking) {
+      stop();
+    } else {
+      speak(textToRead);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-4 py-2">
       {/* Session Progress Header */}
@@ -84,7 +104,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
           onClick={() => setIsCancelDialogOpen(true)}
           className="text-slate-400 hover:text-rose-400 h-8 text-xs gap-1"
         >
-          <X className="w-3.5 h-3.5" /> Thống thoát
+          <X className="w-3.5 h-3.5" /> Thoát phiên
         </Button>
       </div>
 
@@ -118,12 +138,22 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-400 cursor-not-allowed opacity-50"
-              title="Phát âm TTS (Sẽ được hỗ trợ ở Phase 6)"
-              onClick={(e) => e.stopPropagation()}
-              disabled
+              className={`h-7 w-7 p-0 transition-colors ${
+                isCurrentSpeaking
+                  ? 'text-emerald-400 bg-emerald-950/80 animate-pulse'
+                  : 'text-slate-400 hover:text-emerald-400'
+              }`}
+              title={
+                !isSupported
+                  ? 'Trình duyệt không hỗ trợ Web Speech API'
+                  : isCurrentSpeaking
+                  ? 'Dừng phát âm'
+                  : 'Phát âm bằng TTS'
+              }
+              onClick={handleAudioPlay}
+              disabled={!isSupported}
             >
-              <Volume2 className="w-4 h-4" />
+              {isCurrentSpeaking ? <Square className="w-3.5 h-3.5 fill-current" /> : <Volume2 className="w-4 h-4" />}
             </Button>
           </div>
 
@@ -187,6 +217,9 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
           </div>
         </Card>
       </div>
+
+      {/* Voice Recorder Widget for Pronunciation Practice */}
+      <VoiceRecorderWidget itemId={item.id} itemPrompt={item.prompt} />
 
       {/* Rating Buttons Section (Enabled only after answer is flipped) */}
       <div className="space-y-2 pt-2">

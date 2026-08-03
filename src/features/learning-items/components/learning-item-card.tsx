@@ -4,7 +4,8 @@ import * as React from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LearningItem } from '@/domain/entities/learning-item';
-import { Edit, Copy, Trash2, Volume2, Tag, HelpCircle } from 'lucide-react';
+import { useSpeech } from '@/hooks/use-speech';
+import { Edit, Copy, Trash2, Volume2, Square, Tag, HelpCircle } from 'lucide-react';
 
 export interface LearningItemCardProps {
   item: LearningItem;
@@ -30,6 +31,19 @@ export const LearningItemCard: React.FC<LearningItemCardProps> = ({
   onDelete,
 }) => {
   const typeConfig = TYPE_LABELS[item.type] || TYPE_LABELS.vocabulary;
+  const { isSupported, isSpeaking, currentText, speak, stop } = useSpeech();
+
+  const isCurrentSpeaking = isSpeaking && currentText === item.prompt;
+
+  const handleSpeechToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isSupported) return;
+    if (isCurrentSpeaking) {
+      stop();
+    } else {
+      speak(item.prompt);
+    }
+  };
 
   return (
     <Card
@@ -58,15 +72,26 @@ export const LearningItemCard: React.FC<LearningItemCardProps> = ({
             )}
           </div>
 
-          {/* Audio Placeholder Button for Phase 6 */}
+          {/* Active Audio Button */}
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 w-7 p-0 text-slate-500 hover:text-slate-400 cursor-not-allowed opacity-60"
-            title="Phát âm TTS (Sẽ được hỗ trợ ở Phase 6)"
-            disabled
+            className={`h-7 w-7 p-0 transition-colors ${
+              isCurrentSpeaking
+                ? 'text-emerald-400 bg-emerald-950/80 animate-pulse'
+                : 'text-slate-400 hover:text-emerald-400'
+            }`}
+            title={
+              !isSupported
+                ? 'Trình duyệt không hỗ trợ Web Speech API'
+                : isCurrentSpeaking
+                ? 'Dừng phát âm'
+                : 'Phát âm từ vựng'
+            }
+            onClick={handleSpeechToggle}
+            disabled={!isSupported}
           >
-            <Volume2 className="w-3.5 h-3.5" />
+            {isCurrentSpeaking ? <Square className="w-3.5 h-3.5 fill-current" /> : <Volume2 className="w-3.5 h-3.5" />}
           </Button>
         </div>
 
