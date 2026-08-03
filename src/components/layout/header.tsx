@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { BookOpen, Wifi } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 
 export const Header: React.FC = () => {
   return (
