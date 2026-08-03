@@ -7,6 +7,7 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { UnsupportedFeature } from '@/components/ui/unsupported-feature';
 import { DeckDetailView, DeckUseCases, DeckWithStats } from '@/features/decks';
+import { LearningItemUseCases } from '@/features/learning-items';
 import NotFound from '@/app/not-found';
 
 export default function DeckDetailPage() {
@@ -21,6 +22,16 @@ export default function DeckDetailPage() {
   const deckUseCases = React.useMemo(() => {
     if (!container) return null;
     return new DeckUseCases(container.deckRepository, container.learningItemRepository);
+  }, [container]);
+
+  const itemUseCases = React.useMemo(() => {
+    if (!container) return null;
+    return new LearningItemUseCases(
+      container.learningItemRepository,
+      container.deckRepository,
+      container.reviewStateRepository,
+      container.db
+    );
   }, [container]);
 
   const loadDeckDetail = React.useCallback(async () => {
@@ -83,6 +94,7 @@ export default function DeckDetailPage() {
     <DeckDetailView
       deck={deck}
       deckUseCases={deckUseCases!}
+      itemUseCases={itemUseCases!}
       onRefresh={loadDeckDetail}
     />
   );

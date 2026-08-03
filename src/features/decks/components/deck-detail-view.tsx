@@ -4,22 +4,29 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { DeckFormDialog } from './deck-form-dialog';
 import { DeckWithStats, DeckUseCases } from '../application/deck-use-cases';
+import { LearningItemUseCases, LearningItemList } from '@/features/learning-items';
 import { CreateDeckInput } from '@/domain/entities/deck';
-import { ArrowLeft, Edit, Archive, ArchiveRestore, Trash2, Layers, Play, GraduationCap, Info } from 'lucide-react';
+import { ArrowLeft, Edit, Archive, ArchiveRestore, Trash2, Layers } from 'lucide-react';
 import { formatDate } from '@/lib/date';
 
 export interface DeckDetailViewProps {
   deck: DeckWithStats;
   deckUseCases: DeckUseCases;
+  itemUseCases: LearningItemUseCases;
   onRefresh: () => Promise<void>;
 }
 
-export const DeckDetailView: React.FC<DeckDetailViewProps> = ({ deck, deckUseCases, onRefresh }) => {
+export const DeckDetailView: React.FC<DeckDetailViewProps> = ({
+  deck,
+  deckUseCases,
+  itemUseCases,
+  onRefresh,
+}) => {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = React.useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = React.useState(false);
@@ -134,30 +141,10 @@ export const DeckDetailView: React.FC<DeckDetailViewProps> = ({ deck, deckUseCas
         </Card>
       </div>
 
-      {/* Placeholder for Learning Items Area (Phase 4 connection) */}
-      <Card variant="default" className="border-dashed border-slate-800">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-emerald-400" /> Quản lý từ vựng & Phiên học
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400">
-            <Info className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              Khu vực quản lý danh sách từ vựng/cụm từ, thẻ Flashcard tương tác và bài tập ôn tập ngắt quãng (SRS) cho bộ học <strong>{deck.name}</strong> sẽ được kết nối ở Phase 4 & Phase 5.
-            </div>
-          </div>
-
-          <div className="flex justify-center pt-2">
-            <Link href="/study">
-              <Button size="md" variant="secondary" className="gap-2">
-                <Play className="w-4 h-4 text-emerald-400" /> Xem phiên học thử nghiệm
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Real Learning Items List Section */}
+      <div className="pt-2">
+        <LearningItemList deckId={deck.id} itemUseCases={itemUseCases} />
+      </div>
 
       {/* Edit Deck Form Dialog */}
       <DeckFormDialog
