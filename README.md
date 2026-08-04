@@ -153,4 +153,11 @@ npm run build
 
 ---
 
+## 📝 Prompt Mẫu Quy Chuẩn (Reference Prompts)
+
+Các prompt quy chuẩn phục vụ mở rộng tính năng Import nâng cao và Sửa lỗi có kiểm soát (Controlled Fix) được lưu trữ tại:
+👉 [`docs/prompts.md`](file:///e:/Project/Wordora/docs/prompts.md)
+
+---
+
 *Wordora MVP được hoàn thiện với tiêu chuẩn chất lượng cao, sẵn sàng phục vụ việc học ngoại ngữ cá nhân hàng ngày!*
