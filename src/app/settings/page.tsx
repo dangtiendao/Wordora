@@ -7,10 +7,19 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/dialog';
 import { LoadingState } from '@/components/ui/loading-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { Volume2, VolumeX, Save, CheckCircle2 } from 'lucide-react';
+import { Volume2, VolumeX, Save, CheckCircle2, Download, Upload, Trash2, AlertTriangle, FileText } from 'lucide-react';
 import { AppSettings } from '@/domain/entities/app-settings';
+import {
+  ExportService,
+  FileReaderAdapter,
+  ImportPipeline,
+  ImportPreview,
+  ExportEnvelope,
+  ConflictStrategy,
+} from '@/features/import-export';
 
 const LANGUAGE_OPTIONS = [
   { value: 'en-US', label: 'Tiếng Anh (Mỹ - en-US)' },
@@ -35,6 +44,23 @@ export default function SettingsPage() {
   const [isLoadingSettings, setIsLoadingSettings] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveSuccess, setSaveSuccess] = React.useState(false);
+
+  // Backup & Restore state
+  const [isExporting, setIsExporting] = React.useState(false);
+  const [exportMessage, setExportMessage] = React.useState<string | null>(null);
+
+  const [importPreview, setImportPreview] = React.useState<ImportPreview | null>(null);
+  const [importEnvelopeRaw, setImportEnvelopeRaw] = React.useState<ExportEnvelope | null>(null);
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = React.useState(false);
+  const [conflictStrategy, setConflictStrategy] = React.useState<ConflictStrategy>('overwrite');
+  const [isRestoring, setIsRestoring] = React.useState(false);
+
+  // Clear DB Dialog State
+  const [isResetDialogOpen, setIsResetDialogOpen] = React.useState(false);
+  const [resetConfirmText, setResetConfirmText] = React.useState('');
+  const [isResetting, setIsResetting] = React.useState(false);
+
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Filter voices by selected language prefix
   const filteredVoices = React.useMemo(() => {
@@ -82,20 +108,91 @@ export default function SettingsPage() {
     };
   }, [status, loadSettings]);
 
-  // Update selected voice URI default if current selection is invalid
-  React.useEffect(() => {
-    let isMounted = true;
-    if (filteredVoices.length > 0 && !selectedVoiceUri) {
-      Promise.resolve().then(() => {
-        if (isMounted) {
-          setSelectedVoiceUri(filteredVoices[0].uri);
-        }
-      });
+  // Handle Export Backup
+  const handleExportBackup = async () => {
+    if (!container) return;
+    setIsExporting(true);
+    setExportMessage(null);
+    try {
+      const exportService = new ExportService(container);
+      const filename = await exportService.exportAndDownload();
+      setExportMessage(`Đã xuất bản sao lưu thành công: ${filename}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Không thể xuất bản sao lưu.');
+    } finally {
+      setIsExporting(false);
     }
-    return () => {
-      isMounted = false;
-    };
-  }, [filteredVoices, selectedVoiceUri]);
+  };
+
+  // Handle File Selection for Preview
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !container) return;
+
+    try {
+      const text = await FileReaderAdapter.readTextFile(file);
+      const jsonObj = JSON.parse(text);
+      const pipeline = new ImportPipeline(container);
+      const preview = pipeline.generatePreview(jsonObj);
+
+      setImportPreview(preview);
+      setImportEnvelopeRaw(jsonObj);
+      setIsPreviewDialogOpen(true);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lỗi khi đọc file backup.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Handle Execute Restore
+  const handleConfirmRestore = async () => {
+    if (!container || !importEnvelopeRaw) return;
+    setIsRestoring(true);
+    try {
+      const pipeline = new ImportPipeline(container);
+      await pipeline.executeRestore(importEnvelopeRaw, {
+        conflictStrategy,
+        restoreSettings: true,
+      });
+
+      alert('Đã khôi phục dữ liệu thành công từ bản sao lưu!');
+      setIsPreviewDialogOpen(false);
+      window.location.reload();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lỗi khi khôi phục dữ liệu.');
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  // Handle Reset All Application Data
+  const handleResetData = async () => {
+    if (!container || resetConfirmText !== 'XÁC NHẬN XÓA') return;
+    setIsResetting(true);
+    try {
+      const db = container.db;
+      await db.transaction(
+        'rw',
+        [db.decks, db.learningItems, db.reviewStates, db.reviewLogs, db.studySessions, db.recordings],
+        async () => {
+          await db.decks.clear();
+          await db.learningItems.clear();
+          await db.reviewStates.clear();
+          await db.reviewLogs.clear();
+          await db.studySessions.clear();
+          await db.recordings.clear();
+        }
+      );
+      alert('Đã xóa toàn bộ dữ liệu ứng dụng Wordora.');
+      setIsResetDialogOpen(false);
+      window.location.reload();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lỗi khi xóa dữ liệu.');
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,13 +246,14 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-3xl mx-auto">
       <PageHeader
         title="Cài đặt ứng dụng"
-        description="Tùy chỉnh giọng phát âm TTS, tốc độ đọc và các thiết lập cá nhân hóa."
+        description="Tùy chỉnh giọng phát âm TTS, tốc độ đọc, sao lưu bản lưu trữ và quản lý cơ sở dữ liệu local."
       />
 
-      <Card variant="glass" className="max-w-2xl mx-auto border-slate-800">
+      {/* TTS Speech Synthesis Settings */}
+      <Card variant="glass" className="border-slate-800">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Volume2 className="w-5 h-5 text-emerald-400" />
@@ -191,7 +289,7 @@ export default function SettingsPage() {
                 value={speechLang}
                 onChange={(e) => {
                   setSpeechLang(e.target.value);
-                  setSelectedVoiceUri(''); // Reset selected voice for new language
+                  setSelectedVoiceUri('');
                 }}
               />
 
@@ -223,11 +321,6 @@ export default function SettingsPage() {
                   onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
                   className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                 />
-                <div className="flex justify-between text-[10px] text-slate-500">
-                  <span>0.5x (Chậm)</span>
-                  <span>1.0x (Chuẩn)</span>
-                  <span>2.0x (Nhanh)</span>
-                </div>
               </div>
 
               {/* Speech Pitch Slider */}
@@ -245,11 +338,6 @@ export default function SettingsPage() {
                   onChange={(e) => setSpeechPitch(parseFloat(e.target.value))}
                   className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                 />
-                <div className="flex justify-between text-[10px] text-slate-500">
-                  <span>0.5 (Trầm)</span>
-                  <span>1.0 (Chuẩn)</span>
-                  <span>1.5 (Bổng)</span>
-                </div>
               </div>
 
               {/* Action Buttons */}
@@ -273,6 +361,213 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Backup & Restore Section */}
+      <Card variant="glass" className="border-slate-800 space-y-4">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Download className="w-5 h-5 text-emerald-400" />
+            <div>
+              <CardTitle className="text-lg">Sao lưu & Khôi phục dữ liệu (JSON Backup)</CardTitle>
+              <CardDescription>
+                Xuất toàn bộ bộ học, từ vựng và lịch sử ôn tập ra file sao lưu JSON an toàn hoặc khôi phục dữ liệu từ bản sao lưu trước đó.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {exportMessage && (
+            <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-800 text-xs text-emerald-300 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>{exportMessage}</span>
+            </div>
+          )}
+
+          <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 space-y-1">
+            <p className="font-semibold text-slate-200 flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-teal-400" /> Chính sách sao lưu dữ liệu ghi âm (Recordings):
+            </p>
+            <p className="text-slate-400 text-[11px] leading-relaxed">
+              Bản sao lưu JSON bao gồm tất cả các Bộ học, Từ vựng, Trạng thái SRS, Lịch sử ôn tập và Phiên học. Các bản ghi âm giọng nói luyện phát âm được lưu trữ cục bộ trực tiếp trên thiết bị của bạn và không gộp trong file JSON này để tối ưu dung lượng.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap pt-2">
+            <Button
+              variant="primary"
+              size="md"
+              isLoading={isExporting}
+              onClick={handleExportBackup}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" /> Xuất bản sao lưu (JSON)
+            </Button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => fileInputRef.current?.click()}
+              className="gap-2"
+            >
+              <Upload className="w-4 h-4" /> Kiểm tra & Khôi phục từ file JSON
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dangerous Operations Section */}
+      <Card variant="glass" className="border-rose-900/40 bg-rose-950/10">
+        <CardHeader>
+          <div className="flex items-center gap-2 text-rose-400">
+            <AlertTriangle className="w-5 h-5" />
+            <div>
+              <CardTitle className="text-lg">Vùng nguy hiểm (Danger Zone)</CardTitle>
+              <CardDescription className="text-rose-400/80">
+                Thao tác xóa toàn bộ dữ liệu ứng dụng Wordora khỏi trình duyệt.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-3">
+          <p className="text-xs text-slate-400">
+            Cảnh báo: Dữ liệu Wordora được lưu trữ cục bộ trên trình duyệt này (`IndexedDB`). Nếu bạn xóa dữ liệu duyệt web hoặc thực hiện thao tác xóa dữ liệu, tất cả bộ học và tiến trình sẽ bị mất hoàn toàn nếu chưa tạo bản sao lưu.
+          </p>
+
+          <Button
+            variant="danger"
+            size="md"
+            onClick={() => {
+              setResetConfirmText('');
+              setIsResetDialogOpen(true);
+            }}
+            className="gap-2"
+          >
+            <Trash2 className="w-4 h-4" /> Xóa toàn bộ dữ liệu ứng dụng
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Import Preview Modal Dialog */}
+      <Dialog
+        isOpen={isPreviewDialogOpen}
+        onClose={() => setIsPreviewDialogOpen(false)}
+        title="Xem trước & Khôi phục dữ liệu"
+        description="Thông tin chi tiết từ bản sao lưu JSON được kiểm định."
+      >
+        <div className="space-y-4 py-2 text-xs">
+          {importPreview?.validationResult.isValid ? (
+            <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Tệp sao lưu hợp lệ (Wordora schemaVersion 1).</span>
+            </div>
+          ) : (
+            <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 space-y-1">
+              <p className="font-bold">Tệp sao lưu không hợp lệ:</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                {importPreview?.validationResult.errors.map((e, idx) => (
+                  <li key={idx}>
+                    {e.path}: {e.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {importPreview && (
+            <div className="space-y-2 border-t border-b border-slate-800 py-3">
+              <p className="font-semibold text-slate-200">Nội dung dữ liệu trong bản sao lưu:</p>
+              <ul className="grid grid-cols-2 gap-2 text-slate-300 font-mono text-[11px]">
+                <li>• Số bộ học: <strong>{importPreview.deckCount}</strong></li>
+                <li>• Số từ vựng: <strong>{importPreview.learningItemCount}</strong></li>
+                <li>• Trạng thái SRS: <strong>{importPreview.reviewStateCount}</strong></li>
+                <li>• Nhật ký ôn tập: <strong>{importPreview.reviewLogCount}</strong></li>
+                <li>• Phiên đã học: <strong>{importPreview.studySessionCount}</strong></li>
+                <li>• Ghi âm đi kèm: <strong>{importPreview.recordingsCount} bản</strong> (chỉ lưu local)</li>
+              </ul>
+            </div>
+          )}
+
+          {importPreview?.validationResult.isValid && (
+            <div className="space-y-2">
+              <label className="font-medium text-slate-200">Xử lý khi khôi phục:</label>
+              <Select
+                options={[
+                  { value: 'overwrite', label: 'Ghi đè hoàn toàn (Xóa dữ liệu cũ & Khôi phục mới)' },
+                  { value: 'duplicate', label: 'Tạo bản sao mới (Giữ dữ liệu cũ & Thêm bản sao)' },
+                ]}
+                value={conflictStrategy}
+                onChange={(e) => setConflictStrategy(e.target.value as ConflictStrategy)}
+              />
+              <p className="text-[11px] text-amber-400 italic">
+                💡 Hệ thống sẽ tự động tạo bản sao lưu tạm thời trước khi ghi. Nếu có bất kỳ lỗi nào xảy ra, toàn bộ thao tác sẽ được hoàn tác an toàn!
+              </p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+            <Button variant="ghost" size="md" onClick={() => setIsPreviewDialogOpen(false)}>
+              Hủy bỏ
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              disabled={!importPreview?.validationResult.isValid}
+              isLoading={isRestoring}
+              onClick={handleConfirmRestore}
+            >
+              Bắt đầu khôi phục ngay
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Reset Application Data Confirmation Dialog */}
+      <Dialog
+        isOpen={isResetDialogOpen}
+        onClose={() => setIsResetDialogOpen(false)}
+        title="Xác nhận xóa TOÀN BỘ dữ liệu?"
+        description="Hành động này sẽ xóa vĩnh viễn tất cả bộ học, từ vựng, lịch sử ôn tập và bản ghi âm khỏi thiết bị."
+        variant="danger"
+      >
+        <div className="space-y-4 py-2">
+          <p className="text-xs text-rose-300 bg-rose-950/40 border border-rose-900 p-3 rounded-xl">
+            Để xác nhận hành động nguy hiểm này, vui lòng nhập chính xác cụm từ <strong className="font-mono text-white underline">XÁC NHẬN XÓA</strong> vào ô dưới đây.
+          </p>
+
+          <input
+            type="text"
+            value={resetConfirmText}
+            onChange={(e) => setResetConfirmText(e.target.value)}
+            placeholder="Nhập XÁC NHẬN XÓA..."
+            className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-rose-500 font-mono"
+          />
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+            <Button variant="ghost" size="md" onClick={() => setIsResetDialogOpen(false)}>
+              Hủy
+            </Button>
+            <Button
+              variant="danger"
+              size="md"
+              disabled={resetConfirmText !== 'XÁC NHẬN XÓA'}
+              isLoading={isResetting}
+              onClick={handleResetData}
+            >
+              Xóa vĩnh viễn dữ liệu
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }
