@@ -11,14 +11,27 @@ import { WordoraDatabase } from '../database/wordora-db';
 import { generateUUID } from '@/lib/uuid';
 import { getCurrentISOString } from '@/lib/date';
 
+/**
+ * Lớp triển khai Repository Mục học (LearningItemRepository) sử dụng IndexedDB/Dexie.
+ */
 export class DexieLearningItemRepository implements LearningItemRepository {
   constructor(private db: WordoraDatabase) {}
 
+  /**
+   * Tìm thẻ học theo ID khoá chính.
+   */
   async findById(id: string): Promise<LearningItem | null> {
     const item = await this.db.learningItems.get(id);
     return item || null;
   }
 
+  /**
+   * Truy vấn danh sách thẻ học theo các tiêu chí lọc.
+   *
+   * @remarks
+   * - Tận dụng index `deckId` để query từ Dexie Collection nếu `filter.deckId` được cung cấp.
+   * - Thực hiện lọc trong bộ nhớ cho các tiêu chí `type` và `tags` (match tất cả các tag trong `filter.tags`).
+   */
   async list(filter?: LearningItemFilterOptions): Promise<LearningItem[]> {
     let collection = this.db.learningItems.toCollection();
 
@@ -40,6 +53,9 @@ export class DexieLearningItemRepository implements LearningItemRepository {
     return items;
   }
 
+  /**
+   * Tạo mới một thẻ học trong cơ sở dữ liệu.
+   */
   async create(input: CreateLearningItemInput): Promise<LearningItem> {
     const now = getCurrentISOString();
     const newItem: LearningItem = {
@@ -63,6 +79,11 @@ export class DexieLearningItemRepository implements LearningItemRepository {
     return newItem;
   }
 
+  /**
+   * Cập nhật thông tin thẻ học.
+   *
+   * @throws Error nếu không tìm thấy `input.id`.
+   */
   async update(input: UpdateLearningItemInput): Promise<LearningItem> {
     const existing = await this.db.learningItems.get(input.id);
     if (!existing) {
@@ -79,6 +100,16 @@ export class DexieLearningItemRepository implements LearningItemRepository {
     return updated;
   }
 
+  /**
+   * Xóa một thẻ học cùng toàn bộ bản ghi `ReviewState` và `Recording` phụ thuộc trong 1 atomic transaction.
+   *
+   * @remarks
+   * - **TRANSACTION BOUNDARY & CASCADE**:
+   *   - Transaction bao gồm `[learningItems, reviewStates, recordings]`.
+   *   - Xóa `ReviewState` có `itemId == id`.
+   *   - Xóa tất cả `Recording` có `itemId == id`.
+   *   - Xóa bản ghi `LearningItem`.
+   */
   async delete(id: string): Promise<boolean> {
     return await this.db.transaction(
       'rw',
@@ -95,6 +126,11 @@ export class DexieLearningItemRepository implements LearningItemRepository {
     );
   }
 
+  /**
+   * Xóa toàn bộ các thẻ học thuộc về một Bộ học (`deckId`) trong 1 atomic transaction.
+   *
+   * @returns Số lượng thẻ học đã bị xóa.
+   */
   async deleteByDeckId(deckId: string): Promise<number> {
     return await this.db.transaction(
       'rw',
@@ -113,6 +149,9 @@ export class DexieLearningItemRepository implements LearningItemRepository {
     );
   }
 
+  /**
+   * Tạo hàng loạt nhiều thẻ học mới (`bulkAdd`).
+   */
   async bulkCreate(inputs: CreateLearningItemInput[]): Promise<LearningItem[]> {
     const now = getCurrentISOString();
     const newItems: LearningItem[] = inputs.map((input) => ({
@@ -136,12 +175,22 @@ export class DexieLearningItemRepository implements LearningItemRepository {
     return newItems;
   }
 
+  /**
+   * Nạp hoặc đè dữ liệu thẻ học hàng loạt (`bulkPut`).
+   *
+   * @remarks
+   * - **IDEMPOTENCY**: Đảm bảo tính idempotent khi khôi phục dữ liệu từ backup.
+   */
   async bulkUpsert(items: LearningItem[]): Promise<void> {
     await this.db.learningItems.bulkPut(items);
   }
 
+  /**
+   * Đếm số lượng thẻ học thỏa mãn bộ lọc.
+   */
   async count(filter?: LearningItemFilterOptions): Promise<number> {
     const items = await this.list(filter);
     return items.length;
   }
 }
+

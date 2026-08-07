@@ -5,11 +5,29 @@ import { DexieReviewStateRepository } from '../repositories/dexie-review-state-r
 import { DexieSettingsRepository } from '../repositories/dexie-settings-repository';
 import { getCurrentISOString } from '@/lib/date';
 
+/**
+ * Đảm bảo bản ghi Cấu hình ứng dụng Singleton (`AppSettings`) luôn được khởi tạo khi mở ứng dụng lần đầu.
+ *
+ * @param db - Instance cơ sở dữ liệu WordoraDatabase.
+ */
 export async function initializeDefaultSettings(db: WordoraDatabase): Promise<void> {
   const settingsRepo = new DexieSettingsRepository(db);
   await settingsRepo.get();
 }
 
+/**
+ * Nạp dữ liệu mẫu ban đầu cho môi trường phát triển (Development / Demo Seed).
+ *
+ * @remarks
+ * - **IDEMPOTENT CHECK**:
+ *   - Kiểm tra số lượng bộ học hiện tại qua `deckRepo.count(true)`. Nếu cơ sở dữ liệu đã có ít nhất 1 bộ học, hàm ngay lập tức bỏ qua và trả về `{ deckCount: 0, itemCount: 0 }` để tránh tạo trùng lắp dữ liệu.
+ * - **SEED DATA**:
+ *   - Tạo 1 Bộ học Oxford 3000 mẫu.
+ *   - Tạo 2 thẻ học mẫu (1 từ vựng, 1 mẫu câu) kèm `ReviewState` tương ứng ở trạng thái `new` và `learning`.
+ *
+ * @param db - Instance cơ sở dữ liệu WordoraDatabase.
+ * @returns Số lượng deck và item được tạo mới.
+ */
 export async function seedDevelopmentData(db: WordoraDatabase): Promise<{ deckCount: number; itemCount: number }> {
   const deckRepo = new DexieDeckRepository(db);
   const itemRepo = new DexieLearningItemRepository(db);
@@ -79,3 +97,4 @@ export async function seedDevelopmentData(db: WordoraDatabase): Promise<{ deckCo
 
   return { deckCount: 1, itemCount: 2 };
 }
+

@@ -4,6 +4,15 @@ import path from 'path';
 import { renderHook } from '@testing-library/react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 
+/**
+ * Bộ kiểm thử đơn vị cho Cấu hình PWA và Trạng thái Mạng (`Pwa & Offline Tests`).
+ *
+ * @remarks
+ * - **VERIFICATION BOUNDARY**:
+ *   - Kiểm tra sự tồn tại và tính hợp lệ của file manifest `public/manifest.json` và Service Worker `public/sw.js`.
+ *   - Kiểm tra hoạt động của `useOnlineStatus` hook trong JSDOM.
+ *   - **REAL DEVICE UNVERIFIED**: Việc cài đặt thực tế PWA (Standalone mode) và lưu cache Offline trên Safari iOS / Chrome Mobile chưa được xác minh trên phần cứng thực.
+ */
 describe('PWA & Offline Capabilities Tests', () => {
   it('validates public/manifest.json structure and attributes', () => {
     const manifestPath = path.join(process.cwd(), 'public', 'manifest.json');
@@ -35,3 +44,4 @@ describe('PWA & Offline Capabilities Tests', () => {
     expect(typeof result.current).toBe('boolean');
   });
 });
+

@@ -2,6 +2,15 @@ import { z } from 'zod';
 import { LearningItemTypeSchema } from '@/domain/schemas/learning-item-schema';
 import { normalizeTags } from '@/features/learning-items/application/learning-item-use-cases';
 
+/**
+ * Zod Schema kiểm định và chuẩn hóa DTO của một hàng dữ liệu Mục học tập khi nhập lẻ từ file (Learning Item Import DTO Schema).
+ *
+ * @remarks
+ * - **DATA NORMALIZATION & DEFAULTS**:
+ *   - `type`: Mặc định là `'vocabulary'` nếu không chỉ định.
+ *   - `difficulty`: Tự động ép kiểu chuỗi/số về số nguyên trong khoảng `[1, 5]`, mặc định 3.
+ *   - `tags`: Chấp nhận mảng chuỗi hoặc chuỗi cách nhau bằng dấu phẩy (ví dụ `"tag1, tag2"`), sau đó tự động biến đổi qua `normalizeTags()` để trim khoảng trắng thừa và loại bỏ phần tử trùng lặp.
+ */
 export const LearningItemImportDTOSchema = z.object({
   id: z.string().uuid().optional(),
   type: LearningItemTypeSchema.default('vocabulary'),
@@ -20,3 +29,4 @@ export const LearningItemImportDTOSchema = z.object({
 });
 
 export type LearningItemImportDTO = z.infer<typeof LearningItemImportDTOSchema>;
+

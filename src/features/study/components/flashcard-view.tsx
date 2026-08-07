@@ -24,6 +24,22 @@ export interface FlashcardViewProps {
   onCancel: () => void;
 }
 
+/**
+ * Component hiển thị giao diện học từ vựng dạng thẻ ghi nhớ Flashcard (`FlashcardView`).
+ *
+ * @remarks
+ * - **FLIP-BEFORE-RATE INVARIANT**:
+ *   - Các nút đánh giá mức độ nhớ (1: Chưa nhớ, 2: Khó, 3: Nhớ, 4: Rất dễ) bị vô hiệu hóa (`disabled={!isAnswerVisible}`) cho tới khi người dùng lật thẻ xem đáp án.
+ * - **KEYBOARD SHORTCUT CONTRACT**:
+ *   - `Space` / `Enter`: Lật mặt thẻ.
+ *   - Phím `1`, `2`, `3`, `4`: Đánh giá mức độ ghi nhớ (chỉ có tác dụng khi `isAnswerVisible === true`).
+ *   - Phím `Escape`: Mở hộp thoại xác nhận hủy phiên học.
+ *   - Có guard kiểm tra tiêu điểm bàn phím (`INPUT`, `TEXTAREA`, `SELECT`) để không kích hoạt phím tắt khi người dùng đang gõ văn bản.
+ * - **AUDIO CLEANUP BOUNDARY**:
+ *   - Tự động gọi `stop()` ngắt âm thanh TTS khi `currentIndex` hoặc `isAnswerVisible` thay đổi để tránh chồng lấp giọng đọc.
+ * - **SRS INTERVAL PREVIEW COMPUTATION**:
+ *   - Tính toán khoảng thời gian lặp lại SRS tiếp theo xem trước qua `SM2Scheduler.previewIntervals()` hiển thị trực tiếp trên từng nút đánh giá.
+ */
 export const FlashcardView: React.FC<FlashcardViewProps> = ({
   deckName,
   item,
@@ -312,3 +328,4 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
     </div>
   );
 };
+

@@ -1,2 +1,7 @@
-// Infrastructure database layer entry point (Dexie DB configuration will be added in Phase 2)
-export {};
+/**
+ * Entry point xuất bản các thành phần của tầng Database (IndexedDB / Dexie).
+ */
+export * from './wordora-db';
+export * from './db-factory';
+export * from './seed-data';
+

@@ -2,6 +2,9 @@ import { StudySessionRepository } from '@/domain/repositories/study-session-repo
 import { StudySession } from '@/domain/entities/study-session';
 import { getCurrentISOString } from '@/lib/date';
 
+/**
+ * Payload dữ liệu nộp hoàn tất phiên học.
+ */
 export interface CompleteStudySessionInput {
   deckId: string;
   totalCards: number;
@@ -10,9 +13,23 @@ export interface CompleteStudySessionInput {
   mode?: 'flashcard';
 }
 
+/**
+ * Application Use Cases quản lý các hoạt động ghi nhận Phiên học (StudyUseCases).
+ */
 export class StudyUseCases {
   constructor(private studySessionRepo: StudySessionRepository) {}
 
+  /**
+   * Tính toán chỉ số và ghi nhận hoàn thành một Phiên học vào cơ sở dữ liệu.
+   *
+   * @remarks
+   * - **METRICS CALCULATION**:
+   *   - `durationSeconds`: Tính thời lượng thực hiện phiên học tính theo giây (`(completedAt - startedAt) / 1000`, tối thiểu 1 giây).
+   *   - `correctAnswers`: Tổng hợp từ số đợt chọn mức `good` (rating 3) và `easy` (rating 4) làm số câu trả lời đúng.
+   *
+   * @param input - Thông tin kết quả phiên học.
+   * @returns Bản ghi `StudySession` đã được lưu trữ.
+   */
   async completeStudySession(input: CompleteStudySessionInput): Promise<StudySession> {
     const completedAt = getCurrentISOString();
     const startTime = new Date(input.startedAt).getTime();
@@ -34,7 +51,11 @@ export class StudyUseCases {
     });
   }
 
+  /**
+   * Truy vấn danh sách các phiên học đã lưu (lọc theo `deckId` nếu được cung cấp).
+   */
   async listStudySessions(deckId?: string): Promise<StudySession[]> {
     return await this.studySessionRepo.list({ deckId });
   }
 }
+

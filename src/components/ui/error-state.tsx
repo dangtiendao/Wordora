@@ -10,6 +10,14 @@ export interface ErrorStateProps {
   className?: string;
 }
 
+/**
+ * Component hiển thị thông báo lỗi xảy ra trong quá trình truy vấn dữ liệu (`ErrorState`).
+ *
+ * @remarks
+ * - **ERROR HANDLING CONTRACT**:
+ *   - Được sử dụng khi việc đọc/ghi CSDL IndexedDB gặp lỗi hoặc khi use case tung ra ngoại lệ bất ngờ (`role="alert"`).
+ *   - Hỗ trợ nút kích hoạt thử lại qua callback `onRetry`.
+ */
 export const ErrorState: React.FC<ErrorStateProps> = ({
   title = 'Đã xảy ra lỗi',
   message,
@@ -38,3 +46,4 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
     </div>
   );
 };
+

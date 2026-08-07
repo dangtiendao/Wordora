@@ -1,3 +1,18 @@
+/**
+ * Service Worker hỗ trợ Progressive Web App (PWA) và Hoạt động Ngoại tuyến (Offline Capabilities).
+ *
+ * @remarks
+ * - **CACHE VERSIONING**: Khóa tên cache `CACHE_NAME = 'wordora-app-shell-v1.0.0'`.
+ * - **PRECACHE ASSETS**: Lưu trữ trước các tài nguyên App Shell tĩnh bao gồm `/`, `/manifest.json`, `/offline.html`, icons, và favicon.
+ * - **NAVIGATION FALLBACK STRATEGY**:
+ *   - Với các yêu cầu điều hướng trang (`request.mode === 'navigate'`): Thử tải qua mạng trước (Network-First). Nếu mất mạng, lấy từ cache hoặc hiển thị trang `/offline.html`.
+ * - **STATIC ASSET STALE-WHILE-REVALIDATE**:
+ *   - Với tài nguyên tĩnh (`/_next/`, `.js`, `.css`, `.png`, `.svg`, `.ico`): Lấy bản cache hiện tại ra lập tức (Stale), đồng thời gửi fetch cập nhật cache ngầm (Revalidate).
+ * - **BOUNDARY WITH INDEXEDDB**:
+ *   - Service Worker CHỈ lưu trữ static JS/CSS bundles và HTML App Shell.
+ *   - Service Worker **TUYỆT ĐỐI KHÔNG LƯU TRỮ DỮ LIỆU CSDL INDEXEDDB** (bộ học, từ vựng, SRS state). Toàn bộ dữ liệu nghiệp vụ do Dexie.js quản lý độc lập trực tiếp dưới IndexedDB.
+ */
+
 const CACHE_NAME = 'wordora-app-shell-v1.0.0';
 
 const PRECACHE_ASSETS = [
@@ -91,3 +106,4 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+

@@ -4,6 +4,14 @@ import * as React from 'react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { WifiOff } from 'lucide-react';
 
+/**
+ * Component hiển thị thông báo trạng thái ngoại tuyến khi người dùng mất mạng (`OfflineIndicator`).
+ *
+ * @remarks
+ * - **ACCESSIBILITY & NON-BLOCKING UI**:
+ *   - Sử dụng `role="status"` và `aria-live="polite"` để thông báo thân thiện với trình đọc màn hình.
+ *   - Hiển thị thông điệp khẳng định dữ liệu local vẫn hoàn toàn sẵn sàng cho việc học và quản lý từ vựng offline.
+ */
 export const OfflineIndicator: React.FC = () => {
   const isOnline = useOnlineStatus();
 
@@ -20,3 +28,4 @@ export const OfflineIndicator: React.FC = () => {
     </div>
   );
 };
+

@@ -18,7 +18,19 @@ import { ReviewState } from '@/domain/entities/review-state';
 import { ReviewLog } from '@/domain/entities/review-log';
 import { StudySession } from '@/domain/entities/study-session';
 
+/**
+ * Adapter đọc tệp từ thiết bị người dùng (File Reader Adapter).
+ *
+ * @remarks
+ * - **SIZE LIMIT VALIDATION**: Kiểm tra `file.size <= MAX_IMPORT_FILE_SIZE_BYTES` (20 MB). Nếu tệp vượt quá 20MB sẽ lập tức quăng lỗi ngăn chặn tràn bộ nhớ RAM trình duyệt.
+ */
 export class FileReaderAdapter {
+  /**
+   * Đọc nội dung tệp văn bản mã hóa UTF-8.
+   *
+   * @param file - Đối tượng `File` do người dùng tải lên.
+   * @returns Chuỗi văn bản JSON.
+   */
   static async readTextFile(file: File): Promise<string> {
     if (file.size > MAX_IMPORT_FILE_SIZE_BYTES) {
       throw new Error(`Dung lượng tệp vượt quá giới hạn tối đa (tối đa 20 MB).`);
@@ -33,7 +45,22 @@ export class FileReaderAdapter {
   }
 }
 
+/**
+ * Trình kiểm định tính hợp lệ của dữ liệu nhập (Import Validator).
+ *
+ * @remarks
+ * - **TRUST BOUNDARY & DEFENSE IN DEPTH**:
+ *   - Parse JSON văn bản an toàn với try/catch.
+ *   - Vệ sinh đối tượng bằng `sanitizeObject(rawObj)` để loại bỏ triệt để các thuộc tính độc hại Prototype Pollution (`__proto__`, `constructor`, `prototype`).
+ *   - Kiểm định cấu hình envelope và từng mảng dữ liệu thực thể thông qua `ExportEnvelopeSchema.safeParse`.
+ */
 export class ImportValidator {
+  /**
+   * Chuyển đổi và kiểm định chuỗi JSON sao lưu.
+   *
+   * @param jsonText - Chuỗi văn bản JSON nhập vào.
+   * @returns Đối tượng `ValidationResult` chứa danh sách chi tiết các lỗi (nếu có).
+   */
   static validateJson(jsonText: string): ValidationResult {
     let rawObj: unknown;
     try {
@@ -71,11 +98,27 @@ export class ImportValidator {
   }
 }
 
+/**
+ * Pipeline điều phối quy trình Nhập và Khôi phục dữ liệu (Import Pipeline).
+ *
+ * @remarks
+ * - **DRY-RUN PREVIEW STAGE**:
+ *   - `generatePreview(envelope)` tính toán thống kê dữ liệu đầu vào mà KHÔNG tạo bất kỳ side effect hay thay đổi nào xuống cơ sở dữ liệu.
+ * - **AUTOMATIC BACKUP-BEFORE-RESTORE**:
+ *   - Trước khi ghi đè hoặc nhập dữ liệu, `executeRestore()` tự động chụp một bản sao lưu toàn bộ dữ liệu hiện tại trong bộ nhớ (`backupSnapshot`).
+ * - **ATOMIC MULTI-TABLE TRANSACTION**:
+ *   - Thực thi các câu lệnh khôi phục bên trong 1 Dexie Read-Write multi-table transaction (`[db.decks, db.learningItems, db.reviewStates, db.reviewLogs, db.studySessions, db.settings]`).
+ * - **AUTOMATIC ROLLBACK RECOVERY**:
+ *   - Nếu transaction khôi phục gặp sự cố hoặc tung ngoại lệ, hệ thống kích hoạt transaction rollback tự động nạp lại `backupSnapshot` nhằm bảo đảm dữ liệu của người dùng được khôi phục nguyên trạng 100%.
+ */
 export class ImportPipeline {
   constructor(private container: RepositoryContainer) {}
 
   /**
-   * Generates a preview dry-run summary of the import envelope.
+   * Sinh báo cáo tổng quan xem trước dữ liệu khôi phục (Dry-Run Preview).
+   *
+   * @param envelope - Khung dữ liệu sao lưu `ExportEnvelope`.
+   * @returns Báo cáo xem trước `ImportPreview`.
    */
   generatePreview(envelope: ExportEnvelope): ImportPreview {
     const validationResult = ImportValidator.validateJson(JSON.stringify(envelope));
@@ -95,7 +138,11 @@ export class ImportPipeline {
   }
 
   /**
-   * Executes atomic restore inside a Dexie multi-table transaction with automatic backup-before-restore.
+   * Thực thi quy trình khôi phục dữ liệu nguyên tử (Atomic Restore).
+   *
+   * @param envelope - Khung dữ liệu sao lưu `ExportEnvelope`.
+   * @param options - Tùy chọn chiến lược giải quyết xung đột (`overwrite` hoặc `duplicate`) và khôi phục cài đặt.
+   * @throws Error nếu dữ liệu không hợp lệ hoặc quá trình restore thất bại.
    */
   async executeRestore(envelope: ExportEnvelope, options?: ImportOptions): Promise<void> {
     const strategy = options?.conflictStrategy || 'overwrite';
@@ -237,3 +284,4 @@ export class ImportPipeline {
     }
   }
 }
+

@@ -7,9 +7,25 @@ import {
 } from '@/domain/entities/exercise';
 import { generateUUID } from '@/lib/uuid';
 
+/**
+ * Trình sinh động các dạng bài tập thực hành trong bộ nhớ (Exercise Generator Engine).
+ */
 export class ExerciseGenerator {
   /**
-   * Generates a Multiple Choice exercise.
+   * Sinh bài tập Trắc nghiệm chọn 1 đáp án đúng từ danh sách các lựa chọn (Multiple Choice Exercise).
+   *
+   * @remarks
+   * - **DISTRACTOR SELECTION & DUPLICATE ELIMINATION**:
+   *   - Loại bỏ chính mục học gốc (`c.id !== item.id`) và các mục có đáp án trùng với đáp án đúng (không phân biệt hoa/thường).
+   *   - Ưu tiên chọn các ứng viên nhiễu có cùng kiểu (`type`, cộng 2 điểm) và cùng từ loại (`partOfSpeech`, cộng 1 điểm).
+   *   - Đảm bảo loại bỏ các đáp án nhiễu bị trùng lặp nội dung bằng `Set<string>` (loại trừ cả trường hợp trùng khác hoa/thường).
+   *   - Lấy tối đa 3 đáp án nhiễu. Yêu cầu bắt buộc phải có ít nhất 1 đáp án nhiễu; nếu không đủ ứng viên nhiễu sẽ trả về `null`.
+   * - **EXACT CORRECT ANSWER INCLUSION**: Đáp án đúng được cam kết xuất hiện chính xác 1 lần trong mảng `options`, sau đó xáo trộn ngẫu nhiên bằng thuật toán Fisher-Yates (hỗ trợ `randomizer` đính kèm).
+   *
+   * @param item - Thẻ học làm căn cứ tạo câu hỏi.
+   * @param candidatePool - Tập hợp các thẻ học ứng viên dùng để tạo các đáp án nhiễu.
+   * @param randomizer - Hàm sinh số ngẫu nhiên (mặc định `Math.random`, hỗ trợ đè cho unit test).
+   * @returns Đối tượng `MultipleChoiceExercise` hoặc `null` nếu không đủ điều kiện.
    */
   static generateMultipleChoice(
     item: LearningItem,
@@ -76,7 +92,11 @@ export class ExerciseGenerator {
   }
 
   /**
-   * Generates a Fill-in-the-Blank exercise.
+   * Sinh bài tập Điền từ còn thiếu vào chỗ trống (Fill-in-the-Blank Exercise).
+   *
+   * @remarks
+   * - Nếu `item.example` chứa từ/cụm từ cần học (`item.prompt`), hàm sẽ thay thế từ đó bằng ký tự đại diện `___`.
+   * - Ngược lại, sinh câu lệnh yêu cầu điền từ tương ứng với nghĩa tiếng Việt.
    */
   static generateFillBlank(item: LearningItem): FillBlankExercise | null {
     const targetWord = item.prompt.trim();
@@ -105,7 +125,15 @@ export class ExerciseGenerator {
   }
 
   /**
-   * Generates a Sentence Order exercise.
+   * Sinh bài tập Sắp xếp câu (Sentence Ordering Exercise).
+   *
+   * @remarks
+   * - **TOKENIZER & UNIQUE TOKEN IDS**:
+   *   - Phân tách chuỗi câu thành mảng các từ dựa trên ranh giới khoảng trắng `/\s+/`.
+   *   - Yêu cầu câu phải có tối thiểu **2 từ**.
+   *   - Mỗi từ được gán một `id` token duy nhất (`token-${idx}-${UUID}`) để phân biệt chính xác các từ trùng lặp nhau trong cùng 1 câu.
+   *   - Mảng token được xáo trộn ngẫu nhiên trước khi gửi lên UI.
+   * - **LIMITATION**: Quy tắc tách từ bằng khoảng trắng phù hợp với tiếng Anh và hầu hết ngôn ngữ viết cách từ; chưa hỗ trợ tách từ chuyên sâu cho ngôn ngữ không dùng khoảng trắng (như tiếng Nhật/Trung không cách từ).
    */
   static generateSentenceOrder(
     item: LearningItem,
@@ -146,3 +174,4 @@ export class ExerciseGenerator {
     };
   }
 }
+

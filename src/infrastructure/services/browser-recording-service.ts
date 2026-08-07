@@ -4,6 +4,28 @@ import {
   RecordingResult,
 } from '@/domain/services/recording-service';
 
+/**
+ * Lớp triển khai dịch vụ Ghi âm giọng nói sử dụng Web MediaRecorder API của trình duyệt.
+ *
+ * @remarks
+ * - **USER GESTURE & PERMISSION LIFECYCLE**:
+ *   - Yêu cầu cấp quyền `navigator.mediaDevices.getUserMedia({ audio: true })` chỉ phát sinh sau thao tác người dùng.
+ *   - Trong `requestPermission()`, các stream tracks được dừng ngay lập tức (`track.stop()`) để tắt ngay đèn báo hiệu micro trên phần cứng.
+ * - **MIME TYPE SELECTION & FALLBACK**:
+ *   - Kiểm tra định dạng hỗ trợ bằng `MediaRecorder.isTypeSupported(type)` theo thứ tự ưu tiên 5 cấp:
+ *     1. `'audio/webm;codecs=opus'` (Chrome/Firefox/Edge)
+ *     2. `'audio/webm'`
+ *     3. `'audio/ogg;codecs=opus'`
+ *     4. `'audio/mp4'` (Safari iOS / macOS)
+ *     5. `'audio/aac'`
+ * - **MEDIASTREAMTRACK & RESOURCE CLEANUP**:
+ *   - `cleanupStreamTracks()` gọi `track.stop()` trên toàn bộ micro tracks khi `stop()`, `cancel()` hoặc gặp lỗi, phòng tránh rò rỉ kết nối phần cứng micro.
+ * - **AUTO-STOP & TIMER CLEANUP**:
+ *   - Tự động dừng thu âm sau thời gian tối đa `maxDurationSeconds` (mặc định 30s).
+ *   - Xóa timer `clearAutoStopTimer()` ngay khi thu âm kết thúc hoặc bị hủy.
+ * - **LOCAL PRIVACY**:
+ *   - Dữ liệu thu âm thu thập dạng `Blob` nhị phân và lưu trữ trực tiếp trên IndexedDB địa phương, tuyệt đối không gửi lên máy chủ từ xa.
+ */
 export class BrowserRecordingService implements RecordingService {
   private state: RecordingState = 'idle';
   private listeners: Set<(state: RecordingState) => void> = new Set();
@@ -200,3 +222,4 @@ export class BrowserRecordingService implements RecordingService {
     this.setState('idle');
   }
 }
+

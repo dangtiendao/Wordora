@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { LearningItemImportDTOSchema } from './schemas/learning-item-import-dto';
 import { normalizeTags } from '@/features/learning-items/application/learning-item-use-cases';
 
+/**
+ * Bộ kiểm thử đơn vị cho Schema kiểm định hàng dữ liệu nhập lẻ (LearningItemImportDTO Schema Unit Tests).
+ */
 describe('LearningItemImportDTO Schema Validation', () => {
   it('validates a valid import row and normalizes tags', () => {
     const rawRow = {
@@ -50,3 +53,4 @@ describe('LearningItemImportDTO Schema Validation', () => {
     expect(normalizeTags(' apple, banana , apple, ')).toEqual(['apple', 'banana']);
   });
 });
+

@@ -11,6 +11,14 @@ export interface EmptyStateProps {
   className?: string;
 }
 
+/**
+ * Component hiển thị trạng thái rỗng khi không có dữ liệu (`EmptyState`).
+ *
+ * @remarks
+ * - **PRESENTATION CONTRACT**:
+ *   - Được hiển thị khi các danh sách dữ liệu (bộ học, mục từ vựng, lịch sử ôn tập) trả về mảng rỗng `length === 0`.
+ *   - Hỗ trợ nút kích hoạt tạo mới nhanh qua callback `onAction`.
+ */
 export const EmptyState: React.FC<EmptyStateProps> = ({
   icon,
   title,
@@ -37,3 +45,4 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     </div>
   );
 };
+

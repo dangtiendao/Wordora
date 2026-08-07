@@ -12,6 +12,19 @@ import { Dialog } from '@/components/ui/dialog';
 import { useSpeech } from '@/hooks/use-speech';
 import { Volume2, Square, ArrowRight, X } from 'lucide-react';
 
+/**
+ * Container điều phối giao diện phiên làm bài tập trắc nghiệm, điền từ và sắp xếp câu (`ExerciseSessionView`).
+ *
+ * @remarks
+ * - **ORCHESTRATION CONTRACT**:
+ *   - Lấy trạng thái phiên làm việc từ `useExerciseSessionStore`.
+ *   - Điều hướng hiển thị Widget phù hợp (`MultipleChoiceWidget`, `FillBlankWidget`, `SentenceOrderWidget`) dựa theo `currentExercise.type`.
+ * - **RESPONSE TIME MEASUREMENT**:
+ *   - Khởi tạo `startTime = Date.now()` khi nạp câu hỏi mới.
+ *   - Tính `responseTimeMs = Date.now() - startTime` khi nộp câu trả lời để lưu nhật ký ôn tập chính xác.
+ * - **AUDIO CLEANUP**:
+ *   - Dừng giọng đọc TTS (`stop()`) mỗi khi chuyển sang câu hỏi mới.
+ */
 export const ExerciseSessionView: React.FC = () => {
   const {
     deckName,
@@ -200,3 +213,4 @@ export const ExerciseSessionView: React.FC = () => {
     </div>
   );
 };
+

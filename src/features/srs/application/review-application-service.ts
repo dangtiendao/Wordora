@@ -4,11 +4,23 @@ import { SM2Scheduler } from '../engine/sm2-scheduler';
 import { generateUUID } from '@/lib/uuid';
 import { getCurrentISOString } from '@/lib/date';
 
+/**
+ * Application Service điều phối và xử lý quy trình nộp kết quả đánh giá lượt ôn tập (Review Application Service).
+ *
+ * @remarks
+ * - **IDEMPOTENCY & DOUBLE-SUBMIT GUARD**:
+ *   - Lấy lịch sử `ReviewLog` gần nhất của mục học (`itemId`). Nếu lượt đánh giá vừa được thực hiện trong vòng **5 giây** (`< 5000ms`) với cùng mức `rating`, hàm sẽ trả về kết quả hiện tại ngay lập tức mà KHÔNG ghi thêm bản ghi log trùng lặp.
+ * - **ATOMIC TRANSACTION**:
+ *   - Cập nhật bản ghi `ReviewState` mới và chèn bản ghi `ReviewLog` nhật ký trong 1 atomic Read-Write transaction duy nhất trên Dexie (`[db.reviewStates, db.reviewLogs]`).
+ */
 export class ReviewApplicationService {
   constructor(private container: RepositoryContainer) {}
 
   /**
-   * Processes a review rating atomically inside a Dexie transaction.
+   * Xử lý lượt ôn tập một mục học theo đánh giá của người dùng.
+   *
+   * @param input - Thông tin lượt đánh giá (`itemId`, `rating`, `sessionId`, `responseTimeMs`, `reviewedAt`).
+   * @returns Kết quả `ScheduleResult` chứa `nextState` và các mốc thời gian đã cập nhật.
    */
   async processReview(input: ReviewApplicationInput): Promise<ScheduleResult> {
     const { itemId, rating, sessionId } = input;
@@ -97,3 +109,4 @@ export class ReviewApplicationService {
     return result;
   }
 }
+

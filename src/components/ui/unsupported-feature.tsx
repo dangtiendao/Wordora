@@ -7,6 +7,14 @@ export interface UnsupportedFeatureProps {
   className?: string;
 }
 
+/**
+ * Component hiển thị thông báo tính năng không được trình duyệt hiện tại hỗ trợ (`UnsupportedFeature`).
+ *
+ * @remarks
+ * - **UNSUPPORTED FEATURE CONTRACT**:
+ *   - Được hiển thị khi kiểm tra `isIndexedDBSupported()`, `isSpeechSynthesisSupported()`, hoặc `isMediaRecorderSupported()` trả về `false`.
+ *   - Gợi ý người dùng nâng cấp hoặc đổi sang trình duyệt hiện đại hơn (Chrome, Firefox, Safari, Edge).
+ */
 export const UnsupportedFeature: React.FC<UnsupportedFeatureProps> = ({
   featureName,
   description,
@@ -29,3 +37,4 @@ export const UnsupportedFeature: React.FC<UnsupportedFeatureProps> = ({
     </div>
   );
 };
+

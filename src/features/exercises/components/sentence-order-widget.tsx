@@ -13,6 +13,16 @@ export interface SentenceOrderWidgetProps {
   userEvaluation: AnswerEvaluation | null;
 }
 
+/**
+ * Widget bài tập sắp xếp các thẻ từ thành câu hoàn chỉnh (`SentenceOrderWidget`).
+ *
+ * @remarks
+ * - **ACCESSIBLE INTERACTION CONTRACT (NO DRAG-AND-DROP DEPENDENCY)**:
+ *   - Thay vì phụ thuộc vào thư viện Drag-and-Drop HTML5 (vốn khó truy cập trên thiết bị di động hoặc đối với bàn phím thuần), Widget cho phép chọn/hủy chọn các token từ bằng thao tác nhấp/chạm trực tiếp (`handleSelectToken` / `handleDeselectToken`).
+ *   - Đảm bảo 100% khả năng truy cập qua bàn phím (Keyboard Accessibility) và trình đọc màn hình.
+ * - **TOKEN ID-BASED EVALUATION**:
+ *   - Truyền danh sách `selectedIds` cho `AnswerEvaluator.evaluateSentenceOrder()` để so sánh chính xác thứ tự token ngay cả khi trong câu có các từ trùng nhau.
+ */
 export const SentenceOrderWidget: React.FC<SentenceOrderWidgetProps> = ({
   exercise,
   onEvaluate,
@@ -154,3 +164,4 @@ export const SentenceOrderWidget: React.FC<SentenceOrderWidgetProps> = ({
     </div>
   );
 };
+
