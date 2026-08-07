@@ -6,6 +6,13 @@ import { ExportEnvelopeSchema, sanitizeObject, MAX_IMPORT_FILE_SIZE_BYTES } from
 import { getRepositoryContainer, RepositoryContainer } from '@/infrastructure/database/db-factory';
 import { WordoraDatabase } from '@/infrastructure/database/wordora-db';
 
+/**
+ * Bộ kiểm thử đơn vị và tích hợp quy trình Xuất / Nhập và Sao lưu Dữ liệu (Import & Export Engine Integration Tests).
+ *
+ * @remarks
+ * - Sử dụng `fake-indexeddb` trong bộ nhớ với tên CSDL ngẫu nhiên để cách ly tuyệt đối giữa các kịch bản test.
+ * - Kiểm tra tạo file name theo mốc UTC, vệ sinh Prototype Pollution, chặn file quá 20MB, và khôi phục nguyên tử (Overwrite & Duplicate strategies).
+ */
 describe('Import & Export Engine Tests', () => {
   let db: WordoraDatabase;
   let container: RepositoryContainer;
@@ -119,3 +126,4 @@ describe('Import & Export Engine Tests', () => {
     expect(overwrittenDecks.length).toBe(1);
   });
 });
+

@@ -1,9 +1,18 @@
 import { z } from 'zod';
 
+/**
+ * Giới hạn dung lượng tối đa của tệp khôi phục JSON: 20 Megabytes (20 * 1024 * 1024 bytes).
+ */
 export const MAX_IMPORT_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB max limit
 
 /**
- * Strips prototype pollution keys (__proto__, constructor, prototype) recursively.
+ * Hàm vệ sinh đối tượng đầu vào phòng chống tấn công Prototype Pollution (Prototype Pollution Protection).
+ *
+ * @remarks
+ * - Đệ quy loại bỏ các thuộc tính nguy hiểm: `__proto__`, `constructor`, `prototype` khỏi đối tượng JSON vừa được parse từ nguồn bên ngoài chưa tin cậy.
+ *
+ * @param obj - Đối tượng gốc vừa parse.
+ * @returns Đối tượng đã được làm sạch hoàn toàn.
  */
 export function sanitizeObject<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') {
@@ -25,6 +34,7 @@ export function sanitizeObject<T>(obj: T): T {
   return cleanObj as T;
 }
 
+/** Zod Schema kiểm định cấu hình Bộ học trong tệp sao lưu. */
 export const DeckSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
@@ -38,6 +48,7 @@ export const DeckSchema = z.object({
   updatedAt: z.string(),
 });
 
+/** Zod Schema kiểm định Mục học tập trong tệp sao lưu. */
 export const LearningItemSchema = z.object({
   id: z.string().uuid(),
   deckId: z.string().uuid(),
@@ -54,6 +65,7 @@ export const LearningItemSchema = z.object({
   updatedAt: z.string(),
 });
 
+/** Zod Schema kiểm định Trạng thái ôn tập SRS trong tệp sao lưu. */
 export const ReviewStateSchema = z.object({
   id: z.string().uuid(),
   itemId: z.string().uuid(),
@@ -70,6 +82,7 @@ export const ReviewStateSchema = z.object({
   updatedAt: z.string(),
 });
 
+/** Zod Schema kiểm định Nhật ký ôn tập trong tệp sao lưu. */
 export const ReviewLogSchema = z.object({
   id: z.string().uuid(),
   itemId: z.string().uuid(),
@@ -84,6 +97,7 @@ export const ReviewLogSchema = z.object({
   algorithmVersion: z.string(),
 });
 
+/** Zod Schema kiểm định Phiên học trong tệp sao lưu. */
 export const StudySessionSchema = z.object({
   id: z.string().uuid(),
   deckId: z.string().uuid(),
@@ -97,6 +111,7 @@ export const StudySessionSchema = z.object({
   updatedAt: z.string(),
 });
 
+/** Zod Schema kiểm định Cấu hình ứng dụng trong tệp sao lưu. */
 export const SettingsSchema = z.object({
   id: z.string().optional(),
   speechLanguage: z.string().optional(),
@@ -108,6 +123,7 @@ export const SettingsSchema = z.object({
   updatedAt: z.string().optional(),
 });
 
+/** Zod Schema kiểm định Khung vỏ toàn bộ tệp sao lưu (ExportEnvelope Schema v1). */
 export const ExportEnvelopeSchema = z.object({
   app: z.literal('wordora'),
   schemaVersion: z.literal(1),
@@ -125,3 +141,4 @@ export const ExportEnvelopeSchema = z.object({
     count: z.number().min(0),
   }),
 });
+

@@ -7,6 +7,9 @@ import { DexieStudySessionRepository } from '../repositories/dexie-study-session
 import { DexieRecordingRepository } from '../repositories/dexie-recording-repository';
 import { DexieSettingsRepository } from '../repositories/dexie-settings-repository';
 
+/**
+ * Container đóng gói toàn bộ instance của 7 Repositories cùng kết nối Database.
+ */
 export interface RepositoryContainer {
   deckRepository: DexieDeckRepository;
   learningItemRepository: DexieLearningItemRepository;
@@ -20,6 +23,17 @@ export interface RepositoryContainer {
 
 let containerInstance: RepositoryContainer | null = null;
 
+/**
+ * Khởi tạo hoặc lấy ra RepositoryContainer duy nhất trong môi trường Client (Factory / Dependency Injection Container).
+ *
+ * @remarks
+ * - **CLIENT BOUNDARY & TEST ISOLATION**:
+ *   - Nếu không cung cấp `dbOverride`, hàm bắt buộc chạy trên trình duyệt (Client), quăng ngoại lệ nếu gọi từ SSR.
+ *   - Cho phép truyền `dbOverride` (ví dụ database khởi tạo từ `fake-indexeddb`) để cách ly dữ liệu giữa các integration test case.
+ *
+ * @param dbOverride - Instance WordoraDatabase tùy chọn đè phục vụ testing.
+ * @returns Container chứa đầy đủ 7 repositories và instance WordoraDatabase.
+ */
 export function getRepositoryContainer(dbOverride?: WordoraDatabase): RepositoryContainer {
   if (dbOverride) {
     return {
@@ -55,6 +69,13 @@ export function getRepositoryContainer(dbOverride?: WordoraDatabase): Repository
   return containerInstance;
 }
 
+/**
+ * Reset Singleton instance của RepositoryContainer.
+ *
+ * @remarks
+ * - Phục vụ cleanup tài nguyên container khi chạy các bộ test độc lập.
+ */
 export function resetRepositoryContainer(): void {
   containerInstance = null;
 }
+

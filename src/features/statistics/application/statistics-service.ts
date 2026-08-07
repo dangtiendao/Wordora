@@ -12,11 +12,24 @@ import { ReviewState } from '@/domain/entities/review-state';
 import { ReviewLog } from '@/domain/entities/review-log';
 import { StudySession } from '@/domain/entities/study-session';
 
+/**
+ * Service ứng dụng tính toán Thống kê và Báo cáo hiệu năng học tập (Statistics Application Service).
+ *
+ * @remarks
+ * - **STREAK CALCULATION**:
+ *   - Chuyển mốc thời gian UTC về chuỗi ngày địa phương (`YYYY-MM-DD`) của trình duyệt.
+ *   - Kiểm tra ngày hiện tại (`todayStr`); nếu hôm nay chưa học thì lùi lại 1 ngày (`yesterdayStr`). Nếu cả ngày hôm qua cũng chưa học thì streak về 0.
+ *   - Đếm liên tiếp lùi dần về các ngày trước đó nếu tồn tại hoạt động học tập (`activityDates.has(dateStr)`).
+ * - **ACCURACY FORMULA**:
+ *   - `accuracyPercent = totalLogsCount > 0 ? Math.round((correctCount / totalLogsCount) * 100) : 0`.
+ * - **ARCHIVED DECK EXCLUSION**:
+ *   - Loại bỏ các bộ học bị lưu trữ (`archivedAt !== null`) và các item/log/session thuộc về chúng khỏi tổng hợp dữ liệu thống kê tổng quan.
+ */
 export class StatisticsService {
   constructor(private container: RepositoryContainer) {}
 
   /**
-   * Helper to format Date into YYYY-MM-DD local string.
+   * Định dạng đối tượng Date thành chuỗi ngày địa phương dạng `YYYY-MM-DD`.
    */
   private toLocalDateString(date: Date): string {
     const y = date.getFullYear();
@@ -26,7 +39,11 @@ export class StatisticsService {
   }
 
   /**
-   * Computes continuous learning streak in days.
+   * Tính số ngày học tập liên tục (Continuous Learning Streak).
+   *
+   * @param activityDates - Set chứa danh sách các ngày có phát sinh hoạt động (`YYYY-MM-DD`).
+   * @param nowDate - Mốc thời gian tham chiếu (mặc định `new Date()`).
+   * @returns Số ngày streak liên tục.
    */
   private calculateStreak(activityDates: Set<string>, nowDate: Date = new Date()): number {
     if (activityDates.size === 0) return 0;
@@ -59,7 +76,10 @@ export class StatisticsService {
   }
 
   /**
-   * Retrieves overall statistics for Dashboard and Overview cards.
+   * Truy vấn thông số thống kê tổng quan cho Dashboard.
+   *
+   * @param nowDate - Mốc thời gian tính toán.
+   * @returns Báo cáo `OverviewStats` chứa phân bố trạng thái, tỷ lệ chính xác, thời lượng học và streak.
    */
   async getOverviewStats(nowDate: Date = new Date()): Promise<OverviewStats> {
     const startOfToday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 0, 0, 0, 0);
@@ -192,7 +212,11 @@ export class StatisticsService {
   }
 
   /**
-   * Retrieves daily activity breakdown points for chart visualization.
+   * Truy vấn mảng dữ liệu hoạt động theo từng ngày phục vụ vẽ biểu đồ (Chart Activity Points).
+   *
+   * @param options - Bộ lọc khoảng thời gian (`7d`, `30d`, `90d`) và `deckId`.
+   * @param nowDate - Mốc thời gian tính toán.
+   * @returns Mảng `DailyActivityPoint[]` đã được điền đủ tất cả các ngày trong khoảng thời gian.
    */
   async getDailyActivityPoints(options?: StatsFilterOptions, nowDate: Date = new Date()): Promise<DailyActivityPoint[]> {
     const days = options?.timeRange === '7d' ? 7 : options?.timeRange === '30d' ? 30 : 90;
@@ -240,7 +264,7 @@ export class StatisticsService {
   }
 
   /**
-   * Retrieves summary statistics grouped by Deck.
+   * Tổng hợp bảng thống kê chi tiết theo từng Bộ học.
    */
   async getDeckSummaries(): Promise<DeckStatsSummary[]> {
     const decks = await this.container.deckRepository.list(false);
@@ -282,3 +306,4 @@ export class StatisticsService {
     return summaries;
   }
 }
+

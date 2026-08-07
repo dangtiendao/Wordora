@@ -1,6 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BrowserRecordingService } from './browser-recording-service';
 
+/**
+ * Bộ kiểm thử đơn vị cho BrowserRecordingService sử dụng Vitest.
+ *
+ * @remarks
+ * - **MOCK LIMITATION NOTICE**:
+ *   - Môi trường Node.js / JSDOM không có phần cứng micro thực cũng như đối tượng `MediaRecorder`.
+ *   - Bài test sử dụng mock giả lập `navigator.mediaDevices.getUserMedia` và lớp `MockMediaRecorder`.
+ *   - **TRÌNH DUYỆT THẬT**: Trên thiết bị thực tế, việc ghi âm đòi hỏi quyền truy cập micro từ người dùng, ngữ cảnh bảo mật HTTPS (`window.isSecureContext`), và việc hỗ trợ các MIME codecs khác nhau giữa Chrome (WebM Opus) và Safari iOS (MP4/AAC). Cần thực hiện kiểm thử thủ công trên thiết bị thực tế.
+ */
 describe('BrowserRecordingService Tests', () => {
   let mockTrackStop: ReturnType<typeof vi.fn>;
   let mockStream: MediaStream;
@@ -87,3 +96,4 @@ describe('BrowserRecordingService Tests', () => {
     expect(mockTrackStop).toHaveBeenCalled();
   });
 });
+

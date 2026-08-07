@@ -8,6 +8,17 @@ interface PwaUpdateToastProps {
   registration: ServiceWorkerRegistration | null;
 }
 
+/**
+ * Component thông báo khi có bản cập nhật Service Worker mới (`PwaUpdateToast`).
+ *
+ * @remarks
+ * - **UPDATE DETECTION & SKIP_WAITING**:
+ *   - Lắng nghe sự kiện `updatefound` trên `ServiceWorkerRegistration` hoặc kiểm tra worker `registration.waiting`.
+ *   - Khi người dùng bấm "Cập nhật ngay", gửi message `{ type: 'SKIP_WAITING' }` tới Service Worker mới đang chờ để kích hoạt ngay lập tức.
+ * - **INDEXEDDB DATA PRESERVATION**:
+ *   - Việc cập nhật Service Worker và làm mới trang (`window.location.reload()`) chỉ thay thế các JS/CSS bundles và HTML App Shell.
+ *   - **TUYỆT ĐỐI KHÔNG ẢNH HƯỞNG TỚI DỮ LIỆU CSDL INDEXEDDB**: Toàn bộ dữ liệu bộ học, từ vựng và lịch sử học tập lưu trên đĩa qua Dexie.js hoàn toàn được giữ nguyên vẹn 100%.
+ */
 export const PwaUpdateToast: React.FC<PwaUpdateToastProps> = ({ registration }) => {
   const [showUpdateToast, setShowUpdateToast] = React.useState(false);
 
@@ -77,3 +88,4 @@ export const PwaUpdateToast: React.FC<PwaUpdateToastProps> = ({ registration }) 
     </div>
   );
 };
+

@@ -4,21 +4,45 @@ import { ReviewState } from '@/domain/entities/review-state';
 import { Deck } from '@/domain/entities/deck';
 import { SM2Scheduler } from '../engine/sm2-scheduler';
 
+/**
+ * Mục phần tử trong Hàng chờ ôn tập ngắt quãng (SRS Queue Item).
+ */
 export interface SrsQueueItem {
   item: LearningItem;
   reviewState: ReviewState;
   queueCategory: 'overdue' | 'learning' | 'new';
 }
 
+/**
+ * Tùy chọn cấu hình truy vấn hàng chờ ôn tập SRS.
+ */
 export interface SrsQueueOptions {
   deckId?: string;
   dailyNewItemLimit?: number; // default 20
   nowDate?: Date;
 }
 
+/**
+ * Service ứng dụng dựng Hàng chờ Ôn tập Ngắt quãng (SRS Queue Builder).
+ *
+ * @remarks
+ * - **PRIORITIZATION PIPELINE**:
+ *   - Lọc bỏ tất cả các bộ học đã bị lưu trữ (`archivedAt !== null`).
+ *   - Phân chia các thẻ học thuộc các bộ học hợp lệ thành 3 phân nhóm:
+ *     1. `overdue`: Thẻ đã học và có mốc đến hạn `dueAt <= now` (sắp xếp tăng dần theo `dueAt` - ưu tiên thẻ trễ hạn sâu nhất).
+ *     2. `learning`: Thẻ đang nằm trong giai đoạn học ban đầu (`status === 'learning'`) (sắp xếp tăng dần theo `dueAt`).
+ *     3. `new`: Thẻ mới chưa từng học (`status === 'new'`), bị giới hạn số lượng theo `dailyNewItemLimit` (mặc định 20 thẻ/ngày).
+ *   - Hàng chờ cuối cùng ghép theo thứ tự ưu tiên: `[...overdue, ...learning, ...cappedNew]`.
+ */
 export class SrsQueueBuilder {
   constructor(private container: RepositoryContainer) {}
 
+  /**
+   * Xây dựng danh sách các phần tử cần ôn tập trong ngày.
+   *
+   * @param options - Cấu hình lọc theo `deckId`, giới hạn thẻ mới và mốc thời gian.
+   * @returns Mảng các `SrsQueueItem` đã sắp xếp theo thứ tự ưu tiên làm bài.
+   */
   async buildQueue(options?: SrsQueueOptions): Promise<SrsQueueItem[]> {
     const nowDate = options?.nowDate || new Date();
     const nowIso = nowDate.toISOString();
@@ -103,3 +127,4 @@ export class SrsQueueBuilder {
     return [...overdueDueItems, ...learningItems, ...cappedNewItems];
   }
 }
+

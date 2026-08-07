@@ -14,6 +14,16 @@ function getSpeechService(): SpeechService {
   return globalSpeechService;
 }
 
+/**
+ * Custom React Hook quản lý tính năng Phát âm TTS trong giao diện UI (`useSpeech`).
+ *
+ * @remarks
+ * - **SINGLETON SERVICE INSTANCE**: Sử dụng duy nhất 1 instance `BrowserSpeechService` toàn cục để tránh đăng ký lặp các sự kiện `onvoiceschanged` của trình duyệt.
+ * - **UNMOUNT & ROUTE CHANGE CLEANUP**:
+ *   - Khi component unmount hoặc chuyển trang, hàm dọn dẹp trong `useEffect` tự động hủy đăng ký listener (`unsubscribe()`) và dừng mọi âm thanh đang phát (`service.stop()`).
+ *
+ * @returns Đối tượng chứa trạng thái `isSupported`, danh sách `voices`, `status`, `isSpeaking`, `currentText` và các phương thức `speak`, `stop`, `pause`, `resume`.
+ */
 export function useSpeech() {
   const service = React.useMemo(() => getSpeechService(), []);
   const [isSupported, setIsSupported] = React.useState(false);
@@ -79,3 +89,4 @@ export function useSpeech() {
     resume,
   };
 }
+

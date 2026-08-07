@@ -4,6 +4,12 @@ import { WordoraDatabase } from '../database/wordora-db';
 import { getRepositoryContainer } from '../database/db-factory';
 import { seedDevelopmentData, initializeDefaultSettings } from '../database/seed-data';
 
+/**
+ * Kiểm thử tích hợp cho tầng Repositories sử dụng Dexie.js và fake-indexeddb trong bộ nhớ.
+ *
+ * @remarks
+ * - Mỗi test case tạo 1 tên database ngẫu nhiên (`test_db_${Date.now()}_...`) để đảm bảo tính độc lập tuyệt đối giữa các bài test.
+ */
 describe('Dexie Repositories Integration Tests', () => {
   let db: WordoraDatabase;
 
@@ -11,6 +17,7 @@ describe('Dexie Repositories Integration Tests', () => {
     // Unique DB name per test to ensure clean state in fake-indexeddb
     db = new WordoraDatabase(`test_db_${Date.now()}_${Math.random()}`);
   });
+
 
   afterEach(async () => {
     await db.delete();

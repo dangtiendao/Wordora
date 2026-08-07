@@ -7,11 +7,30 @@ import { StudySession } from '@/domain/entities/study-session';
 import { Recording } from '@/domain/entities/recording';
 import { AppSettings } from '@/domain/entities/app-settings';
 
+/**
+ * Interface cho bảng appMetadata lưu trữ các cặp key-value cấu hình/trạng thái hệ thống.
+ */
 export interface AppMetadata {
   key: string;
   value: string | number | boolean | object;
 }
 
+/**
+ * Lớp Cơ sở dữ liệu chính của ứng dụng Wordora dựa trên Dexie.js (Wrapper cho IndexedDB trình duyệt).
+ *
+ * @remarks
+ * - **DATABASE VERSIONING & INDEXES**:
+ *   - Schema Version 1 định nghĩa 8 bảng chính.
+ *   - Khoá chính (Primary Key) của các bảng entity luôn dùng chuỗi UUID v4 (không dùng auto-increment) để hỗ trợ xuất/nhập (export/import) và đồng bộ backend không bị trùng lặp ID.
+ *   - Bảng `decks`: Indexed `id, name, sourceLanguage, targetLanguage, createdAt, updatedAt, archivedAt` phục vụ tìm kiếm, sắp xếp và lọc soft-delete.
+ *   - Bảng `learningItems`: Indexed `id, deckId, type, createdAt, updatedAt` phục vụ truy vấn theo bộ học và phân loại thẻ.
+ *   - Bảng `reviewStates`: Indexed `id, itemId, status, dueAt, createdAt, updatedAt` phục vụ quan hệ 1:1 với item và truy vấn thẻ đến hạn ôn tập SRS (`dueAt`).
+ *   - Bảng `reviewLogs`: Indexed `id, itemId, sessionId, reviewedAt` phục vụ truy vấn lịch sử học tập.
+ *   - Bảng `studySessions`: Indexed `id, deckId, mode, startedAt, completedAt, createdAt` phục vụ theo dõi phiên học.
+ *   - Bảng `recordings`: Indexed `id, itemId, createdAt` phục vụ truy vấn file âm thanh ghi âm.
+ *   - Bảng `settings`: Indexed `id, updatedAt` lưu cấu hình duy nhất Singleton (`id = 'default'`).
+ *   - Bảng `appMetadata`: Indexed `key` lưu các tham số meta hệ thống.
+ */
 export class WordoraDatabase extends Dexie {
   decks!: Table<Deck, string>;
   learningItems!: Table<LearningItem, string>;
@@ -43,6 +62,18 @@ export class WordoraDatabase extends Dexie {
 // Global lazy singleton for Client usage
 let dbInstance: WordoraDatabase | null = null;
 
+/**
+ * Lấy instance Singleton của WordoraDatabase cho Client Component.
+ *
+ * @remarks
+ * - **CLIENT BOUNDARY & SSR GUARD**:
+ *   - Trình duyệt hỗ trợ IndexedDB nhưng Node.js SSR / Server Component thì không.
+ *   - Hàm thực hiện kiểm tra `typeof window === 'undefined'` và quăng lỗi ngay nếu bị gọi trong môi trường Server Side Rendering để tránh sự cố crash server.
+ *
+ * @param databaseName - Tên database tùy chọn (mặc định 'wordora_db', cho phép đè tên khi chạy integration test).
+ * @returns Instance WordoraDatabase dùng chung duy nhất trên Client.
+ * @throws Error nếu gọi từ môi trường SSR/Server.
+ */
 export function getWordoraDatabase(databaseName?: string): WordoraDatabase {
   if (typeof window === 'undefined') {
     throw new Error('Attempted to initialize IndexedDB on Server Component / SSR environment.');
@@ -54,9 +85,16 @@ export function getWordoraDatabase(databaseName?: string): WordoraDatabase {
   return dbInstance;
 }
 
+/**
+ * Đóng kết nối và giải phóng instance WordoraDatabase Singleton hiện tại.
+ *
+ * @remarks
+ * - Phục vụ dọn dẹp dẹp tài nguyên khi chạy unit/integration test để đảm bảo môi trường dữ liệu cách ly giữa các test case.
+ */
 export function resetDatabaseInstance(): void {
   if (dbInstance) {
     dbInstance.close();
     dbInstance = null;
   }
 }
+

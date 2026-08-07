@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Button } from './button';
 
+/** Props giao diện cho Dialog modal (`DialogProps`). */
 export interface DialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -16,6 +17,18 @@ export interface DialogProps {
   isLoading?: boolean;
 }
 
+/**
+ * Component Hộp thoại Modal dùng chung cho toàn ứng dụng (`Dialog`).
+ *
+ * @remarks
+ * - **ACCESSIBILITY CONTRACT (WAI-ARIA MODAL PATTERN)**:
+ *   - Sử dụng `role="dialog"`, `aria-modal="true"`, `aria-labelledby="dialog-title"`, `aria-describedby="dialog-description"`.
+ * - **KEYBOARD & SCROLL BEHAVIOR**:
+ *   - Lắng nghe phím `Escape` để gọi callback `onClose()`.
+ *   - Tự động khóa cuộn trang nền (`document.body.style.overflow = 'hidden'`) khi hộp thoại đang mở và khôi phục khi đóng.
+ * - **DESTRUCTIVE ACTION SUPPORT**:
+ *   - Hỗ trợ `variant="danger"` hiển thị nút xác nhận màu đỏ cảnh báo thao tác nguy hiểm (xóa bộ học, hủy phiên học).
+ */
 export const Dialog: React.FC<DialogProps> = ({
   isOpen,
   onClose,
@@ -91,3 +104,4 @@ export const Dialog: React.FC<DialogProps> = ({
     </div>
   );
 };
+

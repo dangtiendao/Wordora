@@ -17,6 +17,21 @@ function getRecordingService(): RecordingService {
   return globalRecordingService;
 }
 
+/**
+ * Custom React Hook quản lý trạng thái và thao tác Ghi âm người dùng (`useRecording`).
+ *
+ * @remarks
+ * - **OBJECT URL LIFECYCLE MANAGEMENT**:
+ *   - Tạo chuỗi `audioUrl` tạm thời thông qua `URL.createObjectURL(blob)` CHỈ phục vụ việc nghe lại trên giao diện UI client.
+ *   - Hàm `revokeCurrentUrl()` gọi `URL.revokeObjectURL(audioUrl)` triệt để mỗi khi ghi âm mới, nạp bản ghi mới, hủy thu âm hoặc khi component unmount, phòng ngừa tuyệt đối việc rò rỉ bộ nhớ RAM (Memory Leak).
+ * - **DB STORAGE POLICY**:
+ *   - Tuyệt đối không lưu chuỗi Blob URL vào cơ sở dữ liệu.
+ *   - Khi gọi `saveRecording(itemId)`, lưu trực tiếp đối tượng nhị phân `Blob` (`recordingResult.blob`) vào IndexedDB thông qua `RecordingRepository`.
+ *   - Áp dụng chính sách duy trì 1 bản ghi mới nhất cho mỗi mục học (`deleteByItemId(itemId)` trước khi lưu).
+ * - **TIMER & RESOURCE CLEANUP**:
+ *   - Dọn dẹp `clearInterval(timerRef.current)` khi dừng hoặc unmount.
+ *   - Gọi `service.cancel()` để thu hồi `MediaStreamTrack` của micro khi unmount.
+ */
 export function useRecording() {
   const { container } = useDatabase();
   const service = React.useMemo(() => getRecordingService(), []);
@@ -202,3 +217,4 @@ export function useRecording() {
     deleteRecording,
   };
 }
+

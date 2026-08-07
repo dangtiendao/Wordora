@@ -11,19 +11,34 @@ import { WordoraDatabase } from '../database/wordora-db';
 import { generateUUID } from '@/lib/uuid';
 import { getCurrentISOString } from '@/lib/date';
 
+/**
+ * Lớp triển khai Repository Trạng thái ôn tập ngắt quãng (ReviewStateRepository) trên Dexie.js.
+ */
 export class DexieReviewStateRepository implements ReviewStateRepository {
   constructor(private db: WordoraDatabase) {}
 
+  /**
+   * Tìm trạng thái ôn tập theo ID khoá chính.
+   */
   async findById(id: string): Promise<ReviewState | null> {
     const state = await this.db.reviewStates.get(id);
     return state || null;
   }
 
+  /**
+   * Truy vấn trạng thái ôn tập theo `itemId` của thẻ học (Quan hệ 1:1).
+   */
   async findByItemId(itemId: string): Promise<ReviewState | null> {
     const state = await this.db.reviewStates.where('itemId').equals(itemId).first();
     return state || null;
   }
 
+  /**
+   * Lấy danh sách trạng thái ôn tập theo bộ lọc (`itemId`, `status`, hoặc `dueBefore`).
+   *
+   * @remarks
+   * - **SRS DUE ITEMS QUERY**: Lọc các thẻ học có mốc thời gian `dueAt <= dueBefore` để phục vụ lấy danh sách thẻ cần ôn tập ngắt quãng trong ngày.
+   */
   async list(filter?: ReviewStateFilterOptions): Promise<ReviewState[]> {
     let collection = this.db.reviewStates.toCollection();
 
@@ -47,6 +62,9 @@ export class DexieReviewStateRepository implements ReviewStateRepository {
     return states;
   }
 
+  /**
+   * Khởi tạo trạng thái ôn tập mới cho thẻ học.
+   */
   async create(input: CreateReviewStateInput): Promise<ReviewState> {
     const now = getCurrentISOString();
     const newState: ReviewState = {
@@ -69,6 +87,9 @@ export class DexieReviewStateRepository implements ReviewStateRepository {
     return newState;
   }
 
+  /**
+   * Cập nhật thông số trạng thái ôn tập (interval, easeFactor, dueAt, status) sau lượt ôn.
+   */
   async update(input: UpdateReviewStateInput): Promise<ReviewState> {
     const existing = await this.db.reviewStates.get(input.id);
     if (!existing) {
@@ -85,6 +106,9 @@ export class DexieReviewStateRepository implements ReviewStateRepository {
     return updated;
   }
 
+  /**
+   * Xóa bản ghi trạng thái ôn tập theo ID.
+   */
   async delete(id: string): Promise<boolean> {
     const existing = await this.db.reviewStates.get(id);
     if (!existing) return false;
@@ -93,11 +117,17 @@ export class DexieReviewStateRepository implements ReviewStateRepository {
     return true;
   }
 
+  /**
+   * Xóa bản ghi trạng thái ôn tập tương ứng với `itemId`.
+   */
   async deleteByItemId(itemId: string): Promise<boolean> {
     const count = await this.db.reviewStates.where('itemId').equals(itemId).delete();
     return count > 0;
   }
 
+  /**
+   * Khởi tạo hàng loạt các trạng thái ôn tập (`bulkAdd`).
+   */
   async bulkCreate(inputs: CreateReviewStateInput[]): Promise<ReviewState[]> {
     const now = getCurrentISOString();
     const newStates: ReviewState[] = inputs.map((input) => ({
@@ -120,12 +150,19 @@ export class DexieReviewStateRepository implements ReviewStateRepository {
     return newStates;
   }
 
+  /**
+   * Nạp đè dữ liệu hàng loạt trạng thái ôn tập (`bulkPut`).
+   */
   async bulkUpsert(states: ReviewState[]): Promise<void> {
     await this.db.reviewStates.bulkPut(states);
   }
 
+  /**
+   * Đếm tổng số bản ghi trạng thái ôn tập theo bộ lọc.
+   */
   async count(filter?: ReviewStateFilterOptions): Promise<number> {
     const states = await this.list(filter);
     return states.length;
   }
 }
+

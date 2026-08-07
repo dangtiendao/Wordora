@@ -5,6 +5,30 @@ import {
   SpeechState,
 } from '@/domain/services/speech-service';
 
+/**
+ * Lớp triển khai dịch vụ Chuyển văn bản thành giọng nói (TTS) sử dụng Web SpeechSynthesis API của trình duyệt.
+ *
+ * @remarks
+ * - **SSR SAFETY & BROWSER BOUNDARY**:
+ *   - Kiểm tra `typeof window !== 'undefined'` và `'speechSynthesis' in window` trước khi truy cập API trình duyệt. Tuyệt đối không gọi API trình duyệt ở module scope.
+ * - **VOICE INITIALIZATION & ASYNC LOADING**:
+ *   - Lần đầu gọi `window.speechSynthesis.getVoices()`, trình duyệt (đặc biệt là Chrome) có thể trả về mảng rỗng `[]`.
+ *   - Đăng ký sự kiện `window.speechSynthesis.onvoiceschanged` để tự động nạp lại danh sách giọng khi trình duyệt sẵn sàng.
+ * - **VOICE FALLBACK HIERARCHY**:
+ *   - Thuật toán `resolveVoice` tìm giọng theo thứ tự ưu tiên 5 cấp:
+ *     1. Khớp chính xác `targetVoiceUri`.
+ *     2. Khớp chính xác `targetLang` (ví dụ `"en-US"`).
+ *     3. Khớp tiền tố ngôn ngữ (ví dụ `"en"`).
+ *     4. Giọng mặc định (`v.default === true`) khớp tiền tố ngôn ngữ.
+ *     5. Global fallback về giọng mặc định trình duyệt hoặc `voices[0]`.
+ *   - Đảm bảo `preferredVoiceURI` không gây crash nếu chạy trên thiết bị khác không có giọng đó.
+ * - **RACE CONDITION & OVERLAPPING UTTERANCES**:
+ *   - Trong `speak()`, gọi `this.stop()` (thực thi `window.speechSynthesis.cancel()`) TRƯỚC KHI phát âm đoạn mới, giúp ngăn chặn hiện tượng đè giọng khi người dùng bấm phát âm nhanh liên tục.
+ * - **PARAMETER CLAMPING**:
+ *   - `rate`: Kẹp trong khoảng `[0.5, 2.0]`.
+ *   - `pitch`: Kẹp trong khoảng `[0.5, 1.5]`.
+ *   - `volume`: Kẹp trong khoảng `[0.0, 1.0]`.
+ */
 export class BrowserSpeechService implements SpeechService {
   private state: SpeechState = 'idle';
   private listeners: Set<(state: SpeechState) => void> = new Set();
@@ -188,3 +212,4 @@ export class BrowserSpeechService implements SpeechService {
     }
   }
 }
+

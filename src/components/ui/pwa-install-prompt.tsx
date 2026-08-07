@@ -9,6 +9,15 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+/**
+ * Component hiển thị thông báo gợi ý cài đặt PWA ứng dụng Wordora (`PwaInstallPrompt`).
+ *
+ * @remarks
+ * - **BEFOREINSTALLPROMPT LIFECYCLE**:
+ *   - Lắng nghe sự kiện `beforeinstallprompt` từ trình duyệt (Android Chrome / Desktop Chrome / Edge), ngăn chặn banner mặc định (`e.preventDefault()`) và lưu sự kiện vào `deferredPrompt`.
+ * - **SAFARI IOS MANUAL INSTALL INSTRUCTIONS**:
+ *   - Nhận biết thiết bị Safari iOS (iPhone/iPad không ở chế độ Standalone). Hiển thị bảng hướng dẫn người dùng nhấn biểu tượng "Chia sẻ" và chọn "Thêm vào Màn hình chính" (Add to Home Screen).
+ */
 export const PwaInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = React.useState<BeforeInstallPromptEvent | null>(null);
   const [isIosSafari, setIsIosSafari] = React.useState(false);
@@ -109,3 +118,4 @@ export const PwaInstallPrompt: React.FC = () => {
 
   return null;
 };
+

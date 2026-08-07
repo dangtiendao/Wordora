@@ -11,14 +11,23 @@ import { WordoraDatabase } from '../database/wordora-db';
 import { generateUUID } from '@/lib/uuid';
 import { getCurrentISOString } from '@/lib/date';
 
+/**
+ * Lớp triển khai Repository Phiên học (StudySessionRepository) trên nền Dexie.js.
+ */
 export class DexieStudySessionRepository implements StudySessionRepository {
   constructor(private db: WordoraDatabase) {}
 
+  /**
+   * Tìm phiên học theo ID khoá chính.
+   */
   async findById(id: string): Promise<StudySession | null> {
     const session = await this.db.studySessions.get(id);
     return session || null;
   }
 
+  /**
+   * Lấy danh sách các phiên học theo bộ lọc `deckId` hoặc `mode`.
+   */
   async list(filter?: StudySessionFilterOptions): Promise<StudySession[]> {
     let collection = this.db.studySessions.toCollection();
 
@@ -37,6 +46,9 @@ export class DexieStudySessionRepository implements StudySessionRepository {
     return sessions;
   }
 
+  /**
+   * Bắt đầu ghi nhận một phiên học mới.
+   */
   async create(input: CreateStudySessionInput): Promise<StudySession> {
     const now = getCurrentISOString();
     const newSession: StudySession = {
@@ -56,6 +68,11 @@ export class DexieStudySessionRepository implements StudySessionRepository {
     return newSession;
   }
 
+  /**
+   * Cập nhật thông số kết quả phiên học khi làm bài hoặc hoàn thành (`completedAt`).
+   *
+   * @throws Error nếu không tìm thấy `input.id`.
+   */
   async update(input: UpdateStudySessionInput): Promise<StudySession> {
     const existing = await this.db.studySessions.get(input.id);
     if (!existing) {
@@ -72,6 +89,9 @@ export class DexieStudySessionRepository implements StudySessionRepository {
     return updated;
   }
 
+  /**
+   * Xóa bản ghi phiên học theo ID.
+   */
   async delete(id: string): Promise<boolean> {
     const existing = await this.db.studySessions.get(id);
     if (!existing) return false;
@@ -80,6 +100,9 @@ export class DexieStudySessionRepository implements StudySessionRepository {
     return true;
   }
 
+  /**
+   * Khởi tạo hàng loạt phiên học mới (`bulkAdd`).
+   */
   async bulkCreate(inputs: CreateStudySessionInput[]): Promise<StudySession[]> {
     const now = getCurrentISOString();
     const newSessions: StudySession[] = inputs.map((input) => ({
@@ -99,12 +122,19 @@ export class DexieStudySessionRepository implements StudySessionRepository {
     return newSessions;
   }
 
+  /**
+   * Nạp đè dữ liệu danh sách phiên học hàng loạt (`bulkPut`).
+   */
   async bulkUpsert(sessions: StudySession[]): Promise<void> {
     await this.db.studySessions.bulkPut(sessions);
   }
 
+  /**
+   * Đếm tổng số phiên học theo bộ lọc.
+   */
   async count(filter?: StudySessionFilterOptions): Promise<number> {
     const sessions = await this.list(filter);
     return sessions.length;
   }
 }
+

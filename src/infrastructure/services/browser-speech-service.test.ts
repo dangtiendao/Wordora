@@ -1,6 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BrowserSpeechService } from './browser-speech-service';
 
+/**
+ * Bộ kiểm thử đơn vị cho BrowserSpeechService sử dụng Vitest.
+ *
+ * @remarks
+ * - **MOCK LIMITATION NOTICE**:
+ *   - Môi trường Node.js / JSDOM không có sẵn đối tượng `window.speechSynthesis`.
+ *   - Các bài test tại đây sử dụng `vi.fn()` giả lập các sự kiện `speak`, `cancel`, `getVoices()`.
+ *   - **TRÌNH DUYỆT THẬT**: Trong thực tế, việc nạp danh sách giọng đọc (`getVoices()`) trên Chrome diễn ra bất đồng bộ thông qua sự kiện `onvoiceschanged`. Việc phát âm phụ thuộc vào quyền autoplay của trình duyệt và giọng đọc được cài đặt trên OS. Các yếu tố này cần được xác minh thủ công trên thiết bị thực.
+ */
 describe('BrowserSpeechService Tests', () => {
   let originalSpeechSynthesis: typeof window.speechSynthesis;
 
@@ -99,3 +108,4 @@ describe('BrowserSpeechService Tests', () => {
     expect(service.getState()).toBe('idle');
   });
 });
+

@@ -7,14 +7,23 @@ import { WordoraDatabase } from '../database/wordora-db';
 import { generateUUID } from '@/lib/uuid';
 import { getCurrentISOString } from '@/lib/date';
 
+/**
+ * Lớp triển khai Repository Nhật ký ôn tập (ReviewLogRepository) trên Dexie.js.
+ */
 export class DexieReviewLogRepository implements ReviewLogRepository {
   constructor(private db: WordoraDatabase) {}
 
+  /**
+   * Tìm bản ghi nhật ký theo ID khoá chính.
+   */
   async findById(id: string): Promise<ReviewLog | null> {
     const log = await this.db.reviewLogs.get(id);
     return log || null;
   }
 
+  /**
+   * Truy vấn danh sách nhật ký ôn tập lọc theo `itemId` hoặc `sessionId`.
+   */
   async list(filter?: ReviewLogFilterOptions): Promise<ReviewLog[]> {
     let collection = this.db.reviewLogs.toCollection();
 
@@ -33,6 +42,9 @@ export class DexieReviewLogRepository implements ReviewLogRepository {
     return logs;
   }
 
+  /**
+   * Ghi nhận một bản ghi nhật ký ôn tập mới (Append-only).
+   */
   async create(input: CreateReviewLogInput): Promise<ReviewLog> {
     const newLog: ReviewLog = {
       id: input.id || generateUUID(),
@@ -52,6 +64,9 @@ export class DexieReviewLogRepository implements ReviewLogRepository {
     return newLog;
   }
 
+  /**
+   * Ghi nhận hàng loạt nhật ký ôn tập mới (`bulkAdd`).
+   */
   async bulkCreate(inputs: CreateReviewLogInput[]): Promise<ReviewLog[]> {
     const now = getCurrentISOString();
     const newLogs: ReviewLog[] = inputs.map((input) => ({
@@ -72,12 +87,19 @@ export class DexieReviewLogRepository implements ReviewLogRepository {
     return newLogs;
   }
 
+  /**
+   * Nạp đè dữ liệu hàng loạt nhật ký ôn tập (`bulkPut`).
+   */
   async bulkUpsert(logs: ReviewLog[]): Promise<void> {
     await this.db.reviewLogs.bulkPut(logs);
   }
 
+  /**
+   * Đếm tổng số bản ghi nhật ký theo bộ lọc.
+   */
   async count(filter?: ReviewLogFilterOptions): Promise<number> {
     const logs = await this.list(filter);
     return logs.length;
   }
 }
+

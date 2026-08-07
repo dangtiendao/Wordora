@@ -6,6 +6,13 @@ export interface LoadingStateProps {
   className?: string;
 }
 
+/**
+ * Component hiển thị trạng thái chờ đang tải dữ liệu (`LoadingState`).
+ *
+ * @remarks
+ * - **LOADING STATE CONTRACT**:
+ *   - Được hiển thị trong giai đoạn khởi tạo cơ sở dữ liệu IndexedDB hoặc khi đang chạy async fetch dữ liệu.
+ */
 export const LoadingState: React.FC<LoadingStateProps> = ({
   label = 'Đang tải dữ liệu...',
   className,
